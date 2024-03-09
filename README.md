@@ -94,16 +94,12 @@ material-kit-react
 
 ## Resources
 
-- More freebies like this one: <https://devias.io>
+
 
 ## Reporting Issues:
 
-- [Github Issues Page](https://github.com/devias-io/react-material-dashboard/issues?ref=devias-io)
-
-## License
-
-- Licensed under MIT (https://github.com/devias-io/react-material-dashboard/blob/master/LICENSE.md)
+- [Github Issues Page]
 
 ## Contact Us
 
-- Email Us: support@deviasio.zendesk.com
+- Email Us: atharvaganmote00@gmail.com , pbakale24@gmail.com, 
