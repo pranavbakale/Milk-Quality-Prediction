@@ -25,8 +25,8 @@ const Page = () => {
   const [method, setMethod] = useState('email');
   const formik = useFormik({
     initialValues: {
-      email: 'amul@india.com',
-      password: 'Password123!',
+      email: '',
+      password: '',
       submit: null
     },
     validationSchema: Yup.object({
@@ -42,14 +42,33 @@ const Page = () => {
     }),
     onSubmit: async (values, helpers) => {
       try {
-        await auth.signIn(values.email, values.password);
-        router.push('/');
+          const response = await fetch('http://localhost:5000/login', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(values),
+          });
+  
+          if (response.ok) {
+              const userData = await response.json();
+              auth.signIn(userData);
+              router.push('/');
+          } else {
+              const errorData = await response.json();
+              helpers.setStatus({ success: false });
+              helpers.setErrors({ submit: errorData.error || 'Authentication failed' });
+              helpers.setSubmitting(false);
+          }
       } catch (err) {
-        helpers.setStatus({ success: false });
-        helpers.setErrors({ submit: err.message });
-        helpers.setSubmitting(false);
+          console.error(err);
+          helpers.setStatus({ success: false });
+          helpers.setErrors({ submit: 'Something went wrong' });
+          helpers.setSubmitting(false);
       }
-    }
+  }
+  
+    
   });
 
   const handleMethodChange = useCallback(
@@ -70,9 +89,7 @@ const Page = () => {
   return (
     <>
       <Head>
-        <title>
-          Login
-        </title>
+        <title>Login</title>
       </Head>
       <Box
         sx={{
@@ -96,9 +113,7 @@ const Page = () => {
               spacing={1}
               sx={{ mb: 3 }}
             >
-              <Typography variant="h4">
-                Login
-              </Typography>
+              <Typography variant="h4">Login</Typography>
               <Typography
                 color="text.secondary"
                 variant="body2"
@@ -180,14 +195,6 @@ const Page = () => {
                 >
                   Forgot Password?
                 </Button>
-                {/*<Button
-                  fullWidth
-                  size="large"
-                  sx={{ mt: 3 }}
-                  onClick={handleSkip}
-                >
-                  Skip authentication
-                </Button>*/}
               </form>
             )}
           </div>

@@ -34,14 +34,34 @@ const Page = () => {
     }),
     onSubmit: async (values, helpers) => {
       try {
-        await auth.signUp(values.email, values.name, values.password);
+        const response = await fetch('http://localhost:5000/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: values.email,
+            name: values.name,
+            password: values.password,
+          }),
+        });
+    
+        if (!response.ok) {
+          throw new Error('Failed to register. Please try again.');
+        }
+    
+        const data = await response.json();
+        console.log('Success:', data);
+        // Handle success scenario, e.g., navigate the user to a different page or show a success message
         router.push('/');
-      } catch (err) {
+      } catch (error) {
+        console.error('Registration error:', error);
         helpers.setStatus({ success: false });
-        helpers.setErrors({ submit: err.message });
+        helpers.setErrors({ submit: error.message });
         helpers.setSubmitting(false);
       }
     }
+    
   });
 
   return (

@@ -19,17 +19,15 @@ const handlers = {
 
     return {
       ...state,
-      ...(
-        // if payload (user) is provided, then is authenticated
-        user
-          ? ({
-            isAuthenticated: true,
-            isLoading: false,
-            user
-          })
-          : ({
-            isLoading: false
-          })
+      ...(user
+        ? ({
+          isAuthenticated: true,
+          isLoading: false,
+          user
+        })
+        : ({
+          isLoading: false
+        })
       )
     };
   },
@@ -55,8 +53,6 @@ const reducer = (state, action) => (
   handlers[action.type] ? handlers[action.type](state, action) : state
 );
 
-// The role of this context is to propagate authentication state through the App tree.
-
 export const AuthContext = createContext({ undefined });
 
 export const AuthProvider = (props) => {
@@ -65,7 +61,6 @@ export const AuthProvider = (props) => {
   const initialized = useRef(false);
 
   const initialize = async () => {
-    // Prevent from calling twice in development mode with React.StrictMode enabled
     if (initialized.current) {
       return;
     }
@@ -81,17 +76,32 @@ export const AuthProvider = (props) => {
     }
 
     if (isAuthenticated) {
-      const user = {
-        id: '5e86809283e28b96d2d38537',
-        avatar: '/assets/avatars/avatar-anika-visser.png',
-        name: 'Amul India',
-        email: 'amul@india.com'
-      };
+      try {
+        const response = await fetch('http://localhost:5000/user', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
 
-      dispatch({
-        type: HANDLERS.INITIALIZE,
-        payload: user
-      });
+        if (response.ok) {
+          const userData = await response.json();
+          dispatch({
+            type: HANDLERS.INITIALIZE,
+            payload: userData
+          });
+        } else {
+          dispatch({
+            type: HANDLERS.INITIALIZE
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        dispatch({
+          type: HANDLERS.INITIALIZE
+        });
+      }
     } else {
       dispatch({
         type: HANDLERS.INITIALIZE
@@ -99,73 +109,65 @@ export const AuthProvider = (props) => {
     }
   };
 
-  useEffect(
-    () => {
-      initialize();
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
+  useEffect(() => {
+    initialize();
+  }, []);
 
-  const skip = () => {
+const signIn = async (userData) => {
     try {
-      window.sessionStorage.setItem('authenticated', 'true');
+        dispatch({
+            type: HANDLERS.SIGN_IN,
+            payload: userData
+        });
+        window.sessionStorage.setItem('authenticated', 'true');
     } catch (err) {
-      console.error(err);
+        console.error(err);
+        throw new Error('Failed to sign in');
     }
+};
 
-    const user = {
-      id: '5e86809283e28b96d2d38537',
-      avatar: '/assets/avatars/avatar-anika-visser.png',
-      name: 'Amul India',
-      email: 'amul@india.com'
-    };
-
-    dispatch({
-      type: HANDLERS.SIGN_IN,
-      payload: user
-    });
-  };
-
-  const signIn = async (email, password) => {
-    if (email !== 'amul@india.com' || password !== 'Password123!') {
-      throw new Error('Please check your email and password');
-    }
-
-    try {
-      window.sessionStorage.setItem('authenticated', 'true');
-    } catch (err) {
-      console.error(err);
-    }
-
-    const user = {
-      id: '5e86809283e28b96d2d38537',
-      avatar: '/assets/avatars/avatar-anika-visser.png',
-      name: 'Amul India',
-      email: 'amul@india.com'
-    };
-
-    dispatch({
-      type: HANDLERS.SIGN_IN,
-      payload: user
-    });
-  };
 
   const signUp = async (email, name, password) => {
-    throw new Error('Sign up is not implemented');
+    try {
+      const response = await fetch('http://localhost:5000/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, name, password }),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        dispatch({
+          type: HANDLERS.SIGN_IN,
+          payload: userData
+        });
+        window.sessionStorage.setItem('authenticated', 'true');
+      } else {
+        throw new Error('Failed to sign up');
+      }
+    } catch (err) {
+      console.error(err);
+      throw new Error('Failed to sign up');
+    }
   };
 
-  const signOut = () => {
-    dispatch({
-      type: HANDLERS.SIGN_OUT
-    });
+  const signOut = async () => {
+    try {
+        window.sessionStorage.removeItem('authenticated');
+      }
+    catch (err) {
+      console.error(err);
+      throw new Error('Failed to sign out');
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         ...state,
-        skip,
         signIn,
         signUp,
         signOut
