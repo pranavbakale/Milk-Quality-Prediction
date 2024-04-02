@@ -1,9 +1,11 @@
+import pickle
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
+import pandas as pd
 
 # MongoDB connection string
-MONGO_URL =  "mongodb+srv://atharva00:atharva_db123@cluster-atga-dev-01.bvrwcjt.mongodb.net/?retryWrites=true&w=majority&appName=cluster-atga-dev-01"
+MONGO_URL = "mongodb+srv://atharva00:atharva_db123@cluster-atga-dev-01.bvrwcjt.mongodb.net/?retryWrites=true&w=majority&appName=cluster-atga-dev-01"
 
 client = MongoClient(MONGO_URL)
 db = client.user_database  # 'user_database' is the database name
@@ -13,6 +15,14 @@ try:
     print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
     print(e)
+
+# Load the trained RandomForestClassifier model using pickle
+with open('random_forest_model.pkl', 'rb') as f:
+    rf_model = pickle.load(f)
+
+# Load the trained SVM model using pickle
+with open('svm_model.pkl', 'rb') as f:
+    svm_model = pickle.load(f)
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -55,6 +65,36 @@ def login_user():
             return jsonify({'message': 'Login successful'}), 200
         else:
             return jsonify({'error': 'Invalid credentials'}), 401
+
+@app.route('/predict_rf', methods=['POST'])
+def predict_rf():
+    if request.method == 'POST':
+        # Get the data from the request
+        data = request.json
+        
+        # Convert data to DataFrame
+        df = pd.DataFrame(data)
+        
+        # Make prediction using the RandomForestClassifier model
+        prediction = rf_model.predict(df)
+        
+        # Return the prediction as JSON
+        return jsonify({'prediction': prediction.tolist()})
+
+@app.route('/predict_svm', methods=['POST'])
+def predict_svm():
+    if request.method == 'POST':
+        # Get the data from the request
+        data = request.json
+        
+        # Convert data to DataFrame
+        df = pd.DataFrame(data)
+        
+        # Make prediction using the SVM model
+        prediction = svm_model.predict(df)
+        
+        # Return the prediction as JSON
+        return jsonify({'prediction': prediction.tolist()})
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import {
   Avatar,
   Box,
@@ -8,62 +9,73 @@ import {
   Divider,
   Typography
 } from '@mui/material';
+import axios from 'axios';
 
-const user = {
-  avatar: '/assets/avatars/avatar-anika-visser.png',
-  city: 'Los Angeles',
-  country: 'USA',
-  jobTitle: 'Senior Developer',
-  name: 'Amul India',
-  timezone: 'GTM-7'
+export const AccountProfile = () => {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get('/api/user-profile'); 
+        setUser(response.data);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  return (
+    <Card>
+      <CardContent>
+        {user && (
+          <Box
+            sx={{
+              alignItems: 'center',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <Avatar
+              src={user.avatar}
+              sx={{
+                height: 80,
+                mb: 2,
+                width: 80
+              }}
+            />
+            <Typography
+              gutterBottom
+              variant="h5"
+            >
+              {user.name}
+            </Typography>
+            <Typography
+              color="text.secondary"
+              variant="body2"
+            >
+            {user.city}, {user.country}
+            </Typography>
+            <Typography
+              color="text.secondary"
+              variant="body2"
+            >
+              Timezone: {user.timezone}
+            </Typography>
+          </Box>
+        )}
+      </CardContent>
+      <Divider />
+      <CardActions>
+        <Button
+          fullWidth
+          variant="text"
+        >
+          Upload picture
+        </Button>
+      </CardActions>
+    </Card>
+  );
 };
-
-export const AccountProfile = () => (
-  <Card>
-    <CardContent>
-      <Box
-        sx={{
-          alignItems: 'center',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        <Avatar
-          src={user.avatar}
-          sx={{
-            height: 80,
-            mb: 2,
-            width: 80
-          }}
-        />
-        <Typography
-          gutterBottom
-          variant="h5"
-        >
-          {user.name}
-        </Typography>
-        {/*<Typography
-          color="text.secondary"
-          variant="body2"
-        >
-          {user.city} {user.country}
-        </Typography>
-        <Typography
-          color="text.secondary"
-          variant="body2"
-        >
-          {user.timezone}
-        </Typography>*/}
-      </Box>
-    </CardContent>
-    <Divider />
-    <CardActions>
-      <Button
-        fullWidth
-        variant="text"
-      >
-        Upload picture
-      </Button>
-    </CardActions>
-  </Card>
-);
