@@ -27,6 +27,7 @@ export const Layout = withAuthGuard((props) => {
   const { children } = props;
   const pathname = usePathname();
   const [openNav, setOpenNav] = useState(false);
+  const [userName, setUserName] = useState(""); // State to store the username
 
   const handlePathnameChange = useCallback(
     () => {
@@ -42,12 +43,45 @@ export const Layout = withAuthGuard((props) => {
       handlePathnameChange();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pathname]
+    [pathname, handlePathnameChange]
   );
+
+  // useEffect to fetch the user name when the component mounts
+  useEffect(() => {
+    // Fetch the user name from the appropriate source (e.g., from localStorage or from API)
+    const fetchUserName = async () => {
+      try {
+        const token = localStorage.getItem('token'); // Retrieve token from localStorage
+        if (!token) {
+          throw new Error('Token not found in localStorage');
+        }
+
+        const response = await fetch(`http://localhost:5000/user-details?token=${token}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // Include token in the Authorization header
+          },
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          // console.log(userData);
+          setUserName(userData.user.name);
+        } else {
+          throw new Error('Failed to fetch user details');
+        }
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+      }
+    };
+    fetchUserName();
+  }, []);
 
   return (
     <>
-      <TopNav onNavOpen={() => setOpenNav(true)} />
+      <TopNav onNavOpen={() => setOpenNav(true)}
+        userName={userName} />
       <SideNav
         onClose={() => setOpenNav(false)}
         open={openNav}

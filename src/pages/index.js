@@ -37,69 +37,69 @@ const Page = () => (
               sx={{ height: '100%' }}
               value="1.6k"
             />
-          </Grid>          
+          </Grid>
           <Grid
             xs={12}
             md={6}
             lg={4}
           >
-          <PredictionAnalysis
+            <PredictionAnalysis
               chartSeries={[22, 15, 63]}
               labels={['Low', 'Medium', 'High']}
               sx={{ height: '100%' }}
-          />
+            />
           </Grid>
-          
+
           <Grid
             xs={12}
             md={12}
             lg={8}
           >
-          <OverviewLatestOrders
-            orders={[
-              {
-                id: 'f69f88012978187a6c12897f',
-                no: '1',
-                customer: {
-                  name: 'Milk_Apr_2019'
+            <OverviewLatestOrders
+              orders={[
+                {
+                  id: 'f69f88012978187a6c12897f',
+                  no: '1',
+                  customer: {
+                    name: 'Milk_Apr_2019'
+                  },
+                  createdAt: 1555016400000
                 },
-                createdAt: 1555016400000
-              },
-              {
-                id: 'f69f88012978187a6c12897f',
-                no: '2',
-                customer: {
-                  name: 'Milk_Apr_2019'
+                {
+                  id: 'f69f88012978187a6c12897f',
+                  no: '2',
+                  customer: {
+                    name: 'Milk_Apr_2019'
+                  },
+                  createdAt: 1555016400000
                 },
-                createdAt: 1555016400000
-              },
-              {
-                id: 'f69f88012978187a6c12897f',
-                no: '3',
-                customer: {
-                  name: 'Milk_Apr_2019'
+                {
+                  id: 'f69f88012978187a6c12897f',
+                  no: '3',
+                  customer: {
+                    name: 'Milk_Apr_2019'
+                  },
+                  createdAt: 1555016400000
                 },
-                createdAt: 1555016400000
-              },
-              {
-                id: 'f69f88012978187a6c12897f',
-                no: '4',
-                customer: {
-                  name: 'Milk_Apr_2019'
+                {
+                  id: 'f69f88012978187a6c12897f',
+                  no: '4',
+                  customer: {
+                    name: 'Milk_Apr_2019'
+                  },
+                  createdAt: 1555016400000
                 },
-                createdAt: 1555016400000
-              },
-              {
-                id: 'f69f88012978187a6c12897f',
-                no: '5',
-                customer: {
-                  name: 'Milk_Apr_2019'
-                },
-                createdAt: 1555016400000
-              }
-            ]}
-            sx={{ height: '100%' }}
-          />
+                {
+                  id: 'f69f88012978187a6c12897f',
+                  no: '5',
+                  customer: {
+                    name: 'Milk_Apr_2019'
+                  },
+                  createdAt: 1555016400000
+                }
+              ]}
+              sx={{ height: '100%' }}
+            />
           </Grid>
         </Grid>
       </Container>

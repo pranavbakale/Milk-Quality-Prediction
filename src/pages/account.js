@@ -1,61 +1,96 @@
 import Head from 'next/head';
+import { useState, useEffect } from 'react';
 import { Box, Container, Stack, Typography, Unstable_Grid2 as Grid } from '@mui/material';
 import { Layout as DashboardLayout } from 'src/layouts/dashboard/layout';
 import { AccountProfile } from 'src/sections/account/account-profile';
 import { AccountProfileDetails } from 'src/sections/account/account-profile-details';
 
-const Page = () => (
-  <>
-    <Head>
-      <title>
-        Account
-      </title>
-    </Head>
-    <Box
-      component="main"
-      sx={{
-        flexGrow: 1,
-        py: 8
-      }}
-    >
-      <Container maxWidth="lg">
-        <Stack spacing={3}>
-          <div>
-            <Typography variant="h4">
-              Account
-            </Typography>
-          </div>
-          <div>
-            <Grid
-              container
-              spacing={3}
-            >
+import axios from 'axios';
+import { useRouter } from 'next/router';
+
+
+const Page = () => {
+  const [user, setUser] = useState(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      const token = localStorage.getItem('token');
+      // console.log("Token retrieved from localStorage:", token);
+      if (!token) {
+        console.error("Token not found in localStorage");
+        router.push('/auth/login');
+        return;
+      }
+
+      try {
+        const response = await axios.get(`http://localhost:5000/user-details?token=${token}`);
+        const userData = response.data.user;
+        // console.log("Fetched user data:", userData);
+        setUser(userData);
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+        router.push('/auth/login');
+      }
+    };
+
+    fetchUserDetails();
+  }, []);
+
+  return (
+    <>
+      <Head>
+        <title>
+          Account
+        </title>
+      </Head>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          py: 8
+        }}
+      >
+        <Container maxWidth="lg">
+          <Stack spacing={3}>
+            <div>
+              <Typography variant="h4">
+                Account
+              </Typography>
+            </div>
+            <div>
               <Grid
-                xs={12}
-                md={6}
-                lg={4}
+                container
+                spacing={3}
               >
-                <AccountProfile />
+                <Grid
+                  item
+                  xs={12}
+                  md={6}
+                  lg={4}
+                >
+                  <AccountProfile user={user} />
+                </Grid>
+                <Grid
+                  item
+                  xs={12}
+                  md={6}
+                  lg={8}
+                >
+                  <AccountProfileDetails user={user} />
+                </Grid>
               </Grid>
-              <Grid
-                xs={12}
-                md={6}
-                lg={8}
-              >
-                <AccountProfileDetails />
-              </Grid>
-            </Grid>
-          </div>
-        </Stack>
-      </Container>
-    </Box>
-  </>
-);
+            </div>
+          </Stack>
+        </Container>
+      </Box>
+    </>
+  )
+};
 
 Page.getLayout = (page) => (
   <DashboardLayout>
     {page}
   </DashboardLayout>
 );
-
 export default Page;

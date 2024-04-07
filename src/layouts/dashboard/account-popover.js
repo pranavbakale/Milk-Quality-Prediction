@@ -4,9 +4,12 @@ import PropTypes from 'prop-types';
 import { Box, Divider, MenuItem, MenuList, Popover, Typography, Button } from '@mui/material';
 import { useAuth } from 'src/hooks/use-auth';
 import { Link } from 'react-router-dom';
+import { useContext } from 'react';
+
 
 export const AccountPopover = (props) => {
-  const { anchorEl, onClose, open } = props;
+  const { anchorEl, onClose, open, userName } = props;
+
   const router = useRouter();
   const auth = useAuth();
 
@@ -40,16 +43,17 @@ export const AccountPopover = (props) => {
         {/*<Typography variant="overline">
           Account
         </Typography>*/}
-          <Button component="a" 
-                  href="../../account">
-            <Typography
-              color="text.secondary"
-              variant="body2"
-            >
-              Amul India
-            </Typography>
-          </Button>
-        
+        <Button component="a"
+          href="../../account">
+          <Typography
+            color="text.secondary"
+            variant="body2"
+          >
+            {userName}
+           
+          </Typography>
+        </Button>
+
       </Box>
       <Divider />
       <MenuList

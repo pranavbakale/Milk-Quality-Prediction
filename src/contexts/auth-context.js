@@ -70,14 +70,16 @@ export const AuthProvider = (props) => {
     let isAuthenticated = false;
 
     try {
-      isAuthenticated = window.sessionStorage.getItem('authenticated') === 'true';
+      isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
     } catch (err) {
       console.error(err);
     }
 
     if (isAuthenticated) {
       try {
-        const response = await fetch('http://localhost:5000/user', {
+        const token = localStorage.getItem('token');
+
+        const response = await fetch(`http://localhost:5000/user-details?token=${token}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -113,18 +115,18 @@ export const AuthProvider = (props) => {
     initialize();
   }, []);
 
-const signIn = async (userData) => {
+  const signIn = async (userData) => {
     try {
-        dispatch({
-            type: HANDLERS.SIGN_IN,
-            payload: userData
-        });
-        window.sessionStorage.setItem('authenticated', 'true');
+      dispatch({
+        type: HANDLERS.SIGN_IN,
+        payload: userData
+      });
+      localStorage.setItem('isAuthenticated', 'true');
     } catch (err) {
-        console.error(err);
-        throw new Error('Failed to sign in');
+      console.error(err);
+      throw new Error('Failed to sign in');
     }
-};
+  };
 
 
   const signUp = async (email, name, password) => {
@@ -154,15 +156,28 @@ const signIn = async (userData) => {
     }
   };
 
+  // const signOut = async () => {
+  //   try {
+  //     localStorage.removeItem('isAuthenticated');
+  //   }
+  //   catch (err) {
+  //     console.error(err);
+  //     throw new Error('Failed to sign out');
+  //   }
+  // };
   const signOut = async () => {
     try {
-        window.sessionStorage.removeItem('authenticated');
-      }
-    catch (err) {
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('token'); // Remove token from local storage
+      dispatch({
+        type: HANDLERS.SIGN_OUT
+      });
+    } catch (err) {
       console.error(err);
       throw new Error('Failed to sign out');
     }
   };
+
 
   return (
     <AuthContext.Provider

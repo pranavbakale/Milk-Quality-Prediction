@@ -15,6 +15,7 @@ const Page = () => {
       email: '',
       name: '',
       password: '',
+      phone: '',
       submit: null
     },
     validationSchema: Yup.object({
@@ -30,7 +31,13 @@ const Page = () => {
       password: Yup
         .string()
         .max(255)
-        .required('Password is required')
+        .required('Password is required'),
+      phone: Yup
+        .string() // Assuming phone number is stored as string
+        .matches(/^[0-9]+$/, 'Must be a valid phone number')
+        .min(10, 'Must be at least 10 characters')
+        .max(15, 'Must be at most 15 characters')
+        .required('Phone number is required')
     }),
     onSubmit: async (values, helpers) => {
       try {
@@ -45,11 +52,11 @@ const Page = () => {
             password: values.password,
           }),
         });
-    
+
         if (!response.ok) {
           throw new Error('Failed to register. Please try again.');
         }
-    
+
         const data = await response.json();
         console.log('Success:', data);
         // Handle success scenario, e.g., navigate the user to a different page or show a success message
@@ -61,7 +68,7 @@ const Page = () => {
         helpers.setSubmitting(false);
       }
     }
-    
+
   });
 
   return (
@@ -126,6 +133,18 @@ const Page = () => {
                   onChange={formik.handleChange}
                   value={formik.values.name}
                 />
+                <TextField
+                  error={!!(formik.touched.phone && formik.errors.phone)}
+                  fullWidth
+                  helperText={formik.touched.phone && formik.errors.phone}
+                  label="Phone Number"
+                  name="phone"
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+                  type="tel" // Use type="tel" for phone number input
+                  value={formik.values.phone}
+                />
+
                 <TextField
                   error={!!(formik.touched.email && formik.errors.email)}
                   fullWidth

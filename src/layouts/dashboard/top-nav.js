@@ -22,7 +22,7 @@ const SIDE_NAV_WIDTH = 280;
 const TOP_NAV_HEIGHT = 64;
 
 export const TopNav = (props) => {
-  const { onNavOpen } = props;
+  const { onNavOpen, userName } = props;
   const lgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'));
   const accountPopover = usePopover();
 
@@ -116,11 +116,13 @@ export const TopNav = (props) => {
         anchorEl={accountPopover.anchorRef.current}
         open={accountPopover.open}
         onClose={accountPopover.handleClose}
+        userName={userName}
       />
     </>
   );
 };
 
 TopNav.propTypes = {
-  onNavOpen: PropTypes.func
+  onNavOpen: PropTypes.func,
+  userName: PropTypes.string
 };

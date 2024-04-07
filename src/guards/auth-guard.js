@@ -10,12 +10,11 @@ export const AuthGuard = (props) => {
   const ignore = useRef(false);
   const [checked, setChecked] = useState(false);
 
-  // Only do authentication check on component mount.
-  // This flow allows you to manually redirect the user after sign-out, otherwise this will be
-  // triggered and will automatically redirect to sign-in page.
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      console.log('AuthGuard component mounted');
+      console.log('isAuthenticated:', isAuthenticated);
 
-  useEffect(
-    () => {
       if (!router.isReady) {
         return;
       }
@@ -27,22 +26,26 @@ export const AuthGuard = (props) => {
 
       ignore.current = true;
 
+      // Check if the user is authenticated
       if (!isAuthenticated) {
-        console.log('Not authenticated, redirecting');
-        router
-          .replace({
-            pathname: '/auth/login',
-            query: router.asPath !== '/' ? { continueUrl: router.asPath } : undefined
-          })
-          .catch(console.error);
+        console.log('Not authenticated, redirecting to login page');
+        router.replace({
+          pathname: '/auth/login',
+          query: router.asPath !== '/' ? { continueUrl: router.asPath } : undefined
+        }).catch(console.error);
       } else {
+        // If the user is authenticated, set checked to true
         setChecked(true);
       }
-    },
-    [router.isReady]
-  );
+    };
+
+    checkAuthentication();
+  }, [router.isReady, isAuthenticated]);
+
+  console.log('Checked:', checked);
 
   if (!checked) {
+    console.log('Authentication check in progress...');
     return null;
   }
 

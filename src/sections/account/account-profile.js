@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Avatar,
   Box,
@@ -9,28 +9,12 @@ import {
   Divider,
   Typography
 } from '@mui/material';
-import axios from 'axios';
 
-export const AccountProfile = () => {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const response = await axios.get('/api/user-profile'); 
-        setUser(response.data);
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
-
+export const AccountProfile = ({ user }) => {
   return (
     <Card>
       <CardContent>
-        {user && (
+        {user ? (
           <Box
             sx={{
               alignItems: 'center',
@@ -39,7 +23,7 @@ export const AccountProfile = () => {
             }}
           >
             <Avatar
-              src={user.avatar}
+              alt='avatar'
               sx={{
                 height: 80,
                 mb: 2,
@@ -50,21 +34,24 @@ export const AccountProfile = () => {
               gutterBottom
               variant="h5"
             >
-              {user.name}
+              {user.name ? user.name : "Name"}
             </Typography>
             <Typography
               color="text.secondary"
               variant="body2"
             >
-            {user.city}, {user.country}
+              {user.state}, {user.country}
             </Typography>
             <Typography
               color="text.secondary"
               variant="body2"
             >
-              Timezone: {user.timezone}
+              {/* Timezone: {user.timezone} */}
+              Timezone
             </Typography>
           </Box>
+        ) : (
+          <Typography variant="body1">Loading user data...</Typography>
         )}
       </CardContent>
       <Divider />
