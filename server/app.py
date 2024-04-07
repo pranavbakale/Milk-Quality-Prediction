@@ -1,3 +1,4 @@
+# Import necessary modules
 import pickle
 import secrets
 from flask import Flask, request, jsonify, session
@@ -8,8 +9,9 @@ from bson import ObjectId
 # MongoDB connection string
 MONGO_URL = "mongodb+srv://atharva00:atharva_db123@cluster-atga-dev-01.bvrwcjt.mongodb.net/?retryWrites=true&w=majority&appName=cluster-atga-dev-01"
 
+# Connect to MongoDB
 client = MongoClient(MONGO_URL)
-db = client.user_database  # 'user_database' is the database name
+db = client.user_database
 
 try:
     client.admin.command('ping')
@@ -38,16 +40,16 @@ def generate_token():
 @app.route('/register', methods=['POST'])
 def register_user():
     if request.method == 'POST':
-        # Extract the data from request
         data = request.json
         name = data.get('name')
         email = data.get('email')
         password = data.get('password')
 
-        if not (name and email and password):
+        # Check if all required fields are present
+        if not all([name, email, password]):
             return jsonify({'error': 'Missing name, email, or password'}), 400
 
-        # Check if the user already exists
+        # Check if user already exists
         if db.users.find_one({"email": email}):
             return jsonify({"error": "User already exists"}), 409
 
@@ -75,7 +77,8 @@ def login_user():
         email = data.get('email')
         password = data.get('password')
 
-        if not (email and password):
+        # Check if email and password are provided
+        if not all([email, password]):
             return jsonify({'error': 'Missing email or password'}), 400
 
         # Check if the user exists and verify the password
@@ -92,7 +95,7 @@ def login_user():
 
             return jsonify({'message': 'Login successful','token':session['token']}), 200
         else:
-            return jsonify({'error': 'Invalid credentials'}), 401
+            return jsonify({'error': 'Invalid credentials'}), 401    
 
 
 # @app.route('/user-details', methods=['GET'])
@@ -169,32 +172,36 @@ def update_user_details():
 @app.route('/predict_rf', methods=['POST'])
 def predict_rf():
     if request.method == 'POST':
-        # Get the data from the request
+        # Get data from the request
         data = request.json
         
-        # Convert data to DataFrame
-        df = pd.DataFrame(data)
+        # Normalize JSON data into a DataFrame
+        df = json_normalize(data)
         
         # Make prediction using the RandomForestClassifier model
         prediction = rf_model.predict(df)
         
-        # Return the prediction as JSON
-        return jsonify({'prediction': prediction.tolist()})
 
+        
+        # Return prediction and accuracy as JSON
+        return jsonify({'prediction': prediction.tolist(), 'accuracy': rf_score * 100})
+
+
+# Prediction endpoint for SVM model
 @app.route('/predict_svm', methods=['POST'])
 def predict_svm():
     if request.method == 'POST':
-        # Get the data from the request
+        # Get data from the request
         data = request.json
         
-        # Convert data to DataFrame
-        df = pd.DataFrame(data)
-        
+        # Normalize JSON data into a DataFrame
+        df = json_normalize(data)
         # Make prediction using the SVM model
         prediction = svm_model.predict(df)
-        
-        # Return the prediction as JSON
-        return jsonify({'prediction': prediction.tolist()})
+             
+        # Return prediction and accuracy as JSON
+        return jsonify({'prediction': prediction.tolist(), 'accuracy': svm_score* 100})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
