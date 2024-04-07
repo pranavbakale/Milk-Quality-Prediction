@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Typography, Grid } from '@mui/material';
 
-const PredictionResult = ({ rfPrediction, svmPrediction, rfAccuracy, svmAccuracy }) => {
+export const PredictionResult = ({ rfPrediction, svmPrediction, rfAccuracy, svmAccuracy }) => {
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} sm={6}>
@@ -38,4 +38,4 @@ const PredictionResult = ({ rfPrediction, svmPrediction, rfAccuracy, svmAccuracy
   );
 };
 
-export default PredictionResult;
+

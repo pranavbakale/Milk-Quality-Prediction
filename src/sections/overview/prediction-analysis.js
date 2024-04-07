@@ -231,7 +231,7 @@ export const PredictionAnalysis = (props) => {
           alignItems="center"
           direction="row"
           justifyContent="center"
-          spacing={4}
+          spacing={5}
           sx={{ mt: 3 }}
         >
           {chartSeries.map((item, index) => {
@@ -243,8 +243,8 @@ export const PredictionAnalysis = (props) => {
                 sx={{
                   backgroundColor: colorMap[label],
                   borderRadius: '4px',
-                  width: '24px',
-                  height: '24px',
+                  width: '30px',
+                  height: '30px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',

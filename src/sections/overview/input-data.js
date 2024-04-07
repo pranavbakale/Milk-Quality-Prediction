@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
 import axios from 'axios';
+
 import {
   Box,
   Button,
@@ -102,7 +103,7 @@ InputForm.propTypes = {
   onSubmit: PropTypes.func.isRequired
 };
 
-const useChartOptions = (labels) => {
+export const useChartOptions = (labels) => {
   const theme = useTheme();
 
   return {
