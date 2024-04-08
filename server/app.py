@@ -30,16 +30,19 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 
-def upload_csv_to_mongodb(csv_data, file_name, user_name):
+def upload_csv_to_mongodb(csv_data, file_name, user_name, user_id):
+    
     # Create metadata dictionary
     metadata = {
         'file_name': file_name,
         'upload_date': datetime.datetime.now(),
-        'user_name': user_name
+        'user_name': user_name,
+        'user_id': user_id
     }
-    # Insert records into MongoDB collection
-    milkdata_collection.insert_many(metadata)
+    milkdata_collection.insert_one(metadata)
+ 
     collection_name = re.sub(r'[^a-zA-Z0-9_]', '_', file_name.split('.')[0])
+
     # Convert CSV data to a pandas DataFrame
     df = pd.read_csv(StringIO(csv_data))
     # Convert DataFrame to dictionary records
@@ -64,7 +67,7 @@ def upload_csv():
             # Get the file name
             file_name = file.filename
             # Get the logged-in user name from session
-            user_token = session.get('token')
+            user_token = request.args.get('token')
             if not user_token:
                 return jsonify({'error': 'User not logged in'}), 401
             
@@ -74,9 +77,9 @@ def upload_csv():
                 return jsonify({'error': 'User not found'}), 404
 
             user_name = user.get('name')
-
+            user_id = user.get('_id')
             # Load CSV data into MongoDB with dynamic collection name
-            load_csv_to_mongodb(csv_data, file_name, user_name)
+            upload_csv_to_mongodb(csv_data, file_name, user_name, user_id)
             return jsonify({'message': f'CSV data loaded successfully into MongoDB collection {file_name}'}), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
@@ -165,9 +168,9 @@ def login_user():
                 session['token'] = user.get('token')
             except Exception as e:
                 print(e)
-            print("in login post req")
-            print(user)
-            print(session['token'])
+            # print("in login post req")
+            # print(user)
+            # print(session['token'])
             
             # sessionStorage.setItem('token', 'your_token_here');
             return jsonify({'message': 'Login successful','token':session['token']}), 200

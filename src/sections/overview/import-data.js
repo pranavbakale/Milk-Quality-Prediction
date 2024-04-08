@@ -42,8 +42,9 @@ export const ImportData = (props) => {
       selectedFiles.forEach(file => {
         formData.append('file', file);
       });
-  
-      fetch('http://localhost:5000/upload-csv', {
+      const token = localStorage.getItem('token');
+
+      fetch(`http://localhost:5000/upload-csv?token=${token}`, {
         method: 'POST',
         body: formData
       })
