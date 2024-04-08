@@ -38,9 +38,27 @@ export const ImportData = (props) => {
 
   const handleUploadClick = () => {
     if (selectedFiles.length > 0) {
-      // Perform the file upload action (e.g., send files to the server)
-      console.log('Uploading CSV files:', selectedFiles);
-      // You can use the 'fetch' API or any other method to upload the files to the server
+      const formData = new FormData();
+      selectedFiles.forEach(file => {
+        formData.append('file', file);
+      });
+  
+      fetch('http://localhost:5000/upload-csv', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        if (response.ok) {
+          console.log('CSV files uploaded successfully');
+          // Optionally, you can reset the selectedFiles state here
+          setSelectedFiles([]);
+        } else {
+          console.error('Failed to upload CSV files');
+        }
+      })
+      .catch(error => {
+        console.error('Error uploading CSV files:', error);
+      });
     } else {
       console.error('No files selected');
     }
