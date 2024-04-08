@@ -8,13 +8,17 @@ from bson import ObjectId
 from sklearn.metrics import accuracy_score 
 from pandas import json_normalize
 from sklearn.model_selection import train_test_split
+from io import StringIO
+import re
+import datetime
 
 # MongoDB connection string
 MONGO_URL = "mongodb+srv://atharva00:atharva_db123@cluster-atga-dev-01.bvrwcjt.mongodb.net/?retryWrites=true&w=majority&appName=cluster-atga-dev-01"
 
 client = MongoClient(MONGO_URL)
-db = client.user_database  # 'user_database' is the database name
-
+user_db = client.user_database  # 'user_database' is the database name
+milk_db = client.Milk_Database
+milkdata_collection = milk_db.milkdata
 try:
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
@@ -24,6 +28,58 @@ except Exception as e:
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
+
+
+def upload_csv_to_mongodb(csv_data, file_name, user_name):
+    # Create metadata dictionary
+    metadata = {
+        'file_name': file_name,
+        'upload_date': datetime.datetime.now(),
+        'user_name': user_name
+    }
+    # Insert records into MongoDB collection
+    milkdata_collection.insert_many(metadata)
+    collection_name = re.sub(r'[^a-zA-Z0-9_]', '_', file_name.split('.')[0])
+    # Convert CSV data to a pandas DataFrame
+    df = pd.read_csv(StringIO(csv_data))
+    # Convert DataFrame to dictionary records
+    records = df.to_dict(orient='records')
+    # Insert records into MongoDB collection
+    milk_db[collection_name].insert_many(records)
+
+
+@app.route('/upload-csv', methods=['POST'])
+def upload_csv():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    if file:
+        try:
+            # Read the CSV file
+            csv_data = file.stream.read().decode("utf-8")
+            # Get the file name
+            file_name = file.filename
+            # Get the logged-in user name from session
+            user_token = session.get('token')
+            if not user_token:
+                return jsonify({'error': 'User not logged in'}), 401
+            
+            # Get the name of the logged-in user
+            user = user_db.users.find_one({"token": user_token})
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+
+            user_name = user.get('name')
+
+            # Load CSV data into MongoDB with dynamic collection name
+            load_csv_to_mongodb(csv_data, file_name, user_name)
+            return jsonify({'message': f'CSV data loaded successfully into MongoDB collection {file_name}'}), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
 
 
@@ -70,7 +126,7 @@ def register_user():
             return jsonify({'error': 'Missing name, email, or password'}), 400
 
         # Check if the user already exists
-        if db.users.find_one({"email": email}):
+        if user_db.users.find_one({"email": email}):
             return jsonify({"error": "User already exists"}), 409
 
         # Generate token for the user
@@ -80,14 +136,14 @@ def register_user():
         newUser = {'name': name, 'email': email, 'password': password, 'token': token}
 
         # Insert the new user with token
-        user_id = db.users.insert_one(newUser).inserted_id
+        user_id = user_db.users.insert_one(newUser).inserted_id
         
         # Convert user_id to string
         user_id_str = str(user_id)
 
         # Convert ObjectId to string in newUser
         newUser['_id'] = str(newUser['_id'])
-
+        
         return jsonify({'message': 'User registered successfully', 'userId': user_id_str, 'newUser': newUser}), 201
     
 @app.route('/login', methods=['POST'])
@@ -101,17 +157,19 @@ def login_user():
             return jsonify({'error': 'Missing email or password'}), 400
 
         # Check if the user exists and verify the password
-        user = db.users.find_one({"email": email, "password": password})
+        user = user_db.users.find_one({"email": email, "password": password})
 
         if user:
             # Store user's token in session
-            session['token'] = user.get('token')
-            # print("in login post req")
-            # print(user)
-            # print(session['token'])
+            try:
+                session['token'] = user.get('token')
+            except Exception as e:
+                print(e)
+            print("in login post req")
+            print(user)
+            print(session['token'])
             
             # sessionStorage.setItem('token', 'your_token_here');
-
             return jsonify({'message': 'Login successful','token':session['token']}), 200
         else:
             return jsonify({'error': 'Invalid credentials'}), 401
@@ -124,7 +182,7 @@ def get_user_details():
     if not token:
         return jsonify({'error': 'Token not provided'}), 400
 
-    user = db.users.find_one({"token": token})
+    user = user_db.users.find_one({"token": token})
     if user:
         # Convert ObjectId to string
         user['_id'] = str(user['_id'])
@@ -139,7 +197,7 @@ def get_user_details():
 def update_user_details():
     token = request.args.get('token')  # Retrieve token from query parameter
     if token:
-        user = db.users.find_one({"token": token})
+        user = user_db.users.find_one({"token": token})
         if user:
             # Extract updated data from request
             data = request.json
@@ -163,7 +221,7 @@ def update_user_details():
                 update_query["phone"] = updated_phone
 
             if update_query:
-                db.users.update_one({"token": token}, {"$set": update_query})
+                user_db.users.update_one({"token": token}, {"$set": update_query})
             
             return jsonify({'message': 'User details updated successfully'}), 200
         else:
