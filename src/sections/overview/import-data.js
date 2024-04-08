@@ -23,6 +23,7 @@ const StyledCard = styled(Card)({
   gap: '20px',
   margin: 'auto', // Center the card horizontally
   backgroundColor: 'rgb(255,255,255)', // Light blue background color
+  backgroundColor: 'rgb(255,255,255)', // Light blue background color
   borderRadius: '15px', // Rounded corners
 });
 
