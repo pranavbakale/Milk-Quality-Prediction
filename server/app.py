@@ -154,7 +154,6 @@ def register_user():
 
         # Check if the user already exists
         if user_db.users.find_one({"email": email}):
-        if user_db.users.find_one({"email": email}):
             return jsonify({"error": "User already exists"}), 409
 
         # Generate token for the user
@@ -287,13 +286,6 @@ def predict_rf():
 
 
 # Prediction endpoint for SVM model
-
-        
-        # Return prediction and accuracy as JSON
-        return jsonify({'prediction': prediction.tolist(), 'accuracy': rf_score * 100})
-
-
-# Prediction endpoint for SVM model
 @app.route('/predict_svm', methods=['POST'])
 def predict_svm():
     if request.method == 'POST':
@@ -311,8 +303,7 @@ def predict_svm():
         # Return prediction and accuracy as JSON
         return jsonify({'prediction': prediction.tolist(), 'accuracy': svm_score* 100})
              
-        # Return prediction and accuracy as JSON
-        return jsonify({'prediction': prediction.tolist(), 'accuracy': svm_score* 100})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
