@@ -122,6 +122,8 @@ with open('svm_model.pkl', 'rb') as f:
 
 
 
+CORS(app, supports_credentials=True)
+
 df = pd.read_csv("milknew.csv")
 
 # Define features and target variable
