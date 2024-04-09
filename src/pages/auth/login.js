@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Head from 'next/head';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,6 +24,7 @@ const Page = () => {
   const router = useRouter();
   const auth = useAuth();
   const [method, setMethod] = useState('email');
+
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ const Page = () => {
     initialValues: {
       email: '',
       password: '',
+      submit: null
     },
     validationSchema: Yup.object({
       email: Yup
@@ -51,31 +53,34 @@ const Page = () => {
     }),
     onSubmit: async (values, helpers) => {
       try {
-        const response = await fetch('http://localhost:5000/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(values),
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          localStorage.setItem('token', userData.token);
-          auth.signIn(userData);
-          auth.setAuthenticated(true);
-          router.push('/');
-        } else {
-          const errorData = await response.json();
-          helpers.setErrors({ submit: errorData.error || 'Authentication failed' });
-        }
+          const response = await fetch('http://localhost:5000/login', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(values),
+          });
+  
+          if (response.ok) {
+              const userData = await response.json();
+              auth.signIn(userData);
+              router.push('/');
+          } else {
+              const errorData = await response.json();
+              helpers.setStatus({ success: false });
+              helpers.setErrors({ submit: errorData.error || 'Authentication failed' });
+              helpers.setSubmitting(false);
+          }
       } catch (err) {
-        console.error(err);
-        helpers.setErrors({ submit: 'Something went wrong' });
+          console.error(err);
+          helpers.setStatus({ success: false });
+          helpers.setErrors({ submit: 'Something went wrong' });
+          helpers.setSubmitting(false);
       }
-    }
+  }
+  
+    
   });
-
 
   const handleMethodChange = useCallback(
     (event, value) => {

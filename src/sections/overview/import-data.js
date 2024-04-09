@@ -22,7 +22,8 @@ const StyledCard = styled(Card)({
   padding: '20px',
   gap: '20px',
   margin: 'auto', // Center the card horizontally
-  backgroundColor: 'rgb(231,230,230)', // Light blue background color
+  backgroundColor: 'rgb(255,255,255)', // Light blue background color
+  backgroundColor: 'rgb(255,255,255)', // Light blue background color
   borderRadius: '15px', // Rounded corners
 });
 
@@ -38,9 +39,28 @@ export const ImportData = (props) => {
 
   const handleUploadClick = () => {
     if (selectedFiles.length > 0) {
-      // Perform the file upload action (e.g., send files to the server)
-      console.log('Uploading CSV files:', selectedFiles);
-      // You can use the 'fetch' API or any other method to upload the files to the server
+      const formData = new FormData();
+      selectedFiles.forEach(file => {
+        formData.append('file', file);
+      });
+      const token = localStorage.getItem('token');
+
+      fetch(`http://localhost:5000/upload-csv?token=${token}`, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        if (response.ok) {
+          console.log('CSV files uploaded successfully');
+          // Optionally, you can reset the selectedFiles state here
+          setSelectedFiles([]);
+        } else {
+          console.error('Failed to upload CSV files');
+        }
+      })
+      .catch(error => {
+        console.error('Error uploading CSV files:', error);
+      });
     } else {
       console.error('No files selected');
     }
