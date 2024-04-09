@@ -288,13 +288,13 @@ def update_user_details():
 def update_password():
     token = request.args.get('token')
     if token:
-        user = db.users.find_one({"token": token})
+        user = user_db.users.find_one({"token": token})
         if user:
             data = request.json
             updated_password = data.get('newPassword')  # Get the new password from the request
 
             # Update the user's password
-            db.users.update_one({"token": token}, {"$set": {"password": updated_password}})
+            user_db.users.update_one({"token": token}, {"$set": {"password": updated_password}})
 
             return jsonify({'message': 'Password updated successfully'}), 200
         else:
@@ -308,7 +308,7 @@ def forgot_password():
     email = data.get('email')
 
     # Check if the email exists in the database
-    user = db.users.find_one({'email': email})
+    user = user_db.users.find_one({'email': email})
     if not user:
         return jsonify({'error': 'User with this email does not exist'}), 404
 
@@ -316,7 +316,7 @@ def forgot_password():
     token = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
 
     # Update the user's record in the database with the token
-    db.users.update_one({'email': email}, {'$set': {'reset_password_token': token}})
+    user_db.users.update_one({'email': email}, {'$set': {'reset_password_token': token}})
 
     # Send an email to the user with a password reset link containing the token
     msg = Message('Password Reset', sender='abhivc12@gmail.com', recipients=[email])
@@ -352,7 +352,7 @@ def reset_pwd():
         return jsonify({'error': 'Token not provided'}), 400
 
     # Find the user by the reset password token
-    user = db.users.find_one({'reset_password_token': token})
+    user = user_db.users.find_one({'reset_password_token': token})
     if not user:
         return jsonify({'error': 'Invalid or expired token'}), 404
 
@@ -365,10 +365,10 @@ def reset_pwd():
     # Update the user's password in the database
     # You may want to hash the password before saving it
     # For example: hashed_password = hash_function(new_password)
-    db.users.update_one({'_id': user['_id']}, {'$set': {'password': new_password}})
+    user_db.users.update_one({'_id': user['_id']}, {'$set': {'password': new_password}})
 
     # Optionally, clear the reset password token and expiry date
-    db.users.update_one({'_id': user['_id']}, {'$unset': {'reset_password_token': ''}})
+    user_db.users.update_one({'_id': user['_id']}, {'$unset': {'reset_password_token': ''}})
 
     return jsonify({'message': 'Password reset successfully'}), 200
 
