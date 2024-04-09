@@ -51,9 +51,11 @@ const Page = () => {
           });
   
           if (response.ok) {
-              const userData = await response.json();
-              auth.signIn(userData);
-              router.push('/');
+             const userData = await response.json();
+             localStorage.setItem("token", userData.token);
+             auth.signIn(userData);
+             auth.setAuthenticated(true);
+             router.push("/");
           } else {
               const errorData = await response.json();
               helpers.setStatus({ success: false });
