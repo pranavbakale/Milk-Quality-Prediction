@@ -8,8 +8,11 @@ import {
   CardHeader,
   Divider,
   TextField,
-  Unstable_Grid2 as Grid
+  Unstable_Grid2 as Grid,
+  Typography
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { PasswordUpdateForm } from './PasswordUpdateForm'; // Import the new component
 
 import axios from "axios";
 
@@ -52,8 +55,13 @@ const states = [
   { value: 'Puducherry', label: 'Puducherry' },
 ];
 
+const DisabledTextField = styled(TextField)({
+  '& input': {
+    opacity: 1, // Adjust the opacity to maintain visibility
+  },
+});
 
-export const AccountProfileDetails = ({ user }) => {
+export const AccountProfileDetails = ({ user, updateUserProfile }) => {
   // console.log("in account profile details component with user data: ", user);
   const [values, setValues] = useState({
     name: '',
@@ -62,6 +70,10 @@ export const AccountProfileDetails = ({ user }) => {
     country: '',
     state: ''
   });
+
+  const [selectedState, setSelectedState] = useState('');
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Update values state when the user prop changes
   useEffect(() => {
@@ -73,13 +85,20 @@ export const AccountProfileDetails = ({ user }) => {
         country: user.country || '',
         state: user.state || ''
       });
+      setSelectedState(user.state || '');
     }
   }, [user]);
+
+
   const handleChange = useCallback((event) => {
     setValues((prevState) => ({
       ...prevState,
       [event.target.name]: event.target.value
     }));
+  }, []);
+
+  const handleStateChange = useCallback((event) => {
+    setSelectedState(event.target.value); // Update the selected state
   }, []);
 
   const handleSubmit = useCallback(
@@ -94,15 +113,33 @@ export const AccountProfileDetails = ({ user }) => {
 
         const response = await axios.put(
           `http://localhost:5000/update-user-details?token=${token}`, // Include token as a query parameter
-          values
+          { ...values, state: selectedState }
         );
         console.log(response.data);
+
+        updateUserProfile({ ...values, state: selectedState });
+
       } catch (error) {
         console.error('Error updating user details:', error);
       }
     },
-    [values]
+    [values, selectedState, updateUserProfile]
   );
+
+  const handlePasswordUpdateClick = useCallback(() => {
+    setShowPasswordForm(true);
+  }, []);
+
+  const handlePasswordUpdate = useCallback(() => {
+    // Handle password update logic...
+    // Display success message...
+    setSuccessMessage('Password updated successfully.');
+    // Redirect to /account
+    setTimeout(() => {
+      window.location.href = '/account';
+    }, 3000); // Redirect after 3 seconds
+  }, []);
+
 
   return (
     <form
@@ -140,7 +177,7 @@ export const AccountProfileDetails = ({ user }) => {
                 xs={12}
                 md={6}
               >
-                <TextField
+                {/* <TextField
                   fullWidth
                   label="Email Address"
                   name="email"
@@ -148,6 +185,15 @@ export const AccountProfileDetails = ({ user }) => {
                   required
                   value={values.email}
 
+                /> */}
+                <DisabledTextField
+                  fullWidth
+                  label="Email Address"
+                  name="email"
+                  onChange={handleChange}
+                  required
+                  value={values.email}
+                  disabled
                 />
               </Grid>
               <Grid
@@ -184,10 +230,11 @@ export const AccountProfileDetails = ({ user }) => {
                   fullWidth
                   label="Select State"
                   name="state"
-                  onChange={handleChange}
+                  onChange={handleStateChange}
                   select
                   SelectProps={{ native: true }}
-                  value={user && user.state && states.find(state => state.value === user.state) ? user.state : ''}
+                  // value={user && user.state && states.find(state => state.value === user.state) ? user.state : ''}
+                  value={selectedState}
                 >
                   <option value=""></option>
                   {states.map((option) => (
@@ -200,6 +247,40 @@ export const AccountProfileDetails = ({ user }) => {
                   ))}
                 </TextField>
               </Grid>
+              <Grid
+                xs={12}
+                md={6}
+              >
+                {/* <CardActions>
+                  <Button
+                    fullWidth
+                    variant="text"
+                  >
+                    Update Password
+                  </Button>
+                </CardActions> */}
+                {showPasswordForm && (
+                  <PasswordUpdateForm
+                    onSuccess={handlePasswordUpdate}
+                    onCancel={() => setShowPasswordForm(false)}
+                  />
+                )}
+                <CardActions>
+                  <Button
+                    fullWidth
+                    variant="text"
+                    onClick={handlePasswordUpdateClick}>
+                    Update Password
+                  </Button>
+                </CardActions>
+                {/* Success message */}
+                {successMessage && (
+                  <Typography variant="body1"
+                    color="success">
+                    {successMessage}
+                  </Typography>
+                )}
+              </Grid>
             </Grid>
           </Box>
         </CardContent>
@@ -207,7 +288,7 @@ export const AccountProfileDetails = ({ user }) => {
         <CardActions sx={{ justifyContent: 'flex-end' }}>
           <Button type="submit"
             variant="contained">
-            Save details
+            Save Details
           </Button>
         </CardActions>
       </Card>

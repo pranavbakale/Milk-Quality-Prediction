@@ -42,13 +42,13 @@ export const AccountProfile = ({ user }) => {
             >
               {user.state}, {user.country}
             </Typography>
-            <Typography
+            {/* <Typography
               color="text.secondary"
               variant="body2"
             >
               {/* Timezone: {user.timezone} */}
-              Timezone
-            </Typography>
+            {/* Timezone */}
+            {/* </Typography> */}
           </Box>
         ) : (
           <Typography variant="body1">Loading user data...</Typography>

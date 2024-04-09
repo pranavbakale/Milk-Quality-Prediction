@@ -50,6 +50,7 @@ const Page = () => {
             email: values.email,
             name: values.name,
             password: values.password,
+            phone: values.phone
           }),
         });
 

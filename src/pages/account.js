@@ -37,6 +37,10 @@ const Page = () => {
     fetchUserDetails();
   }, []);
 
+  const updateUserProfile = (updatedProfile) => {
+    setUser(updatedProfile);
+  };
+
   return (
     <>
       <Head>
@@ -69,7 +73,8 @@ const Page = () => {
                   md={6}
                   lg={4}
                 >
-                  <AccountProfile user={user} />
+                  <AccountProfile user={user}
+                    updateUserProfile={updateUserProfile} />
                 </Grid>
                 <Grid
                   item
@@ -77,7 +82,8 @@ const Page = () => {
                   md={6}
                   lg={8}
                 >
-                  <AccountProfileDetails user={user} />
+                  <AccountProfileDetails user={user}
+                    updateUserProfile={updateUserProfile} />
                 </Grid>
               </Grid>
             </div>
