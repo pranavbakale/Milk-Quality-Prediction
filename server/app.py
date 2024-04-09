@@ -1,10 +1,25 @@
 import pickle
 import secrets
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, render_template
+from flask_mail import Mail, Message
 from flask_cors import CORS
 from pymongo import MongoClient
 import pandas as pd
 from bson import ObjectId
+
+import random
+import string
+
+app = Flask(__name__)
+# Configure Flask-Mail with SMTP server details
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'abhidadavc@gmail.com'  # Your email address
+app.config['MAIL_PASSWORD'] = 'prwt zmlh zemc fpcd'  # Your email password
+
+mail = Mail(app)
+
 from sklearn.metrics import accuracy_score 
 from pandas import json_normalize
 from sklearn.model_selection import train_test_split
@@ -104,6 +119,10 @@ with open('random_forest_model.pkl', 'rb') as f:
 with open('svm_model.pkl', 'rb') as f:
     svm_model = pickle.load(f)
 
+
+
+CORS(app, supports_credentials=True)
+
 df = pd.read_csv("milknew.csv")
 
 # Define features and target variable
@@ -132,6 +151,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_
 
 rf_score = accuracy_score(y_test, rf_model.predict(X_test) )
 svm_score = accuracy_score(y_test, svm_model.predict(X_test))
+
 
 # Set secret key for session management
 app.secret_key = 'your_secret_key_here'
@@ -148,12 +168,12 @@ def register_user():
         name = data.get('name')
         email = data.get('email')
         password = data.get('password')
+        phone = data.get('phone')
 
         if not (name and email and password):
             return jsonify({'error': 'Missing name, email, or password'}), 400
 
         # Check if the user already exists
-        if user_db.users.find_one({"email": email}):
         if user_db.users.find_one({"email": email}):
             return jsonify({"error": "User already exists"}), 409
 
@@ -161,7 +181,7 @@ def register_user():
         token = generate_token()
 
         # Construct the new user object
-        newUser = {'name': name, 'email': email, 'password': password, 'token': token}
+        newUser = {'name': name, 'email': email, 'password': password,'phone':phone, 'token': token}
 
         # Insert the new user with token
         user_id = user_db.users.insert_one(newUser).inserted_id
@@ -264,6 +284,95 @@ def update_user_details():
         return jsonify({'error': 'Token not provided'}), 401
 
 
+@app.route('/update-password', methods=['PUT'])
+def update_password():
+    token = request.args.get('token')
+    if token:
+        user = db.users.find_one({"token": token})
+        if user:
+            data = request.json
+            updated_password = data.get('newPassword')  # Get the new password from the request
+
+            # Update the user's password
+            db.users.update_one({"token": token}, {"$set": {"password": updated_password}})
+
+            return jsonify({'message': 'Password updated successfully'}), 200
+        else:
+            return jsonify({'error': 'User not found'}), 404
+    else:
+        return jsonify({'error': 'Token not provided'}), 401
+
+@app.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json()
+    email = data.get('email')
+
+    # Check if the email exists in the database
+    user = db.users.find_one({'email': email})
+    if not user:
+        return jsonify({'error': 'User with this email does not exist'}), 404
+
+    # Generate a random password reset token
+    token = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
+
+    # Update the user's record in the database with the token
+    db.users.update_one({'email': email}, {'$set': {'reset_password_token': token}})
+
+    # Send an email to the user with a password reset link containing the token
+    msg = Message('Password Reset', sender='abhivc12@gmail.com', recipients=[email])
+    msg.body = f'Please click the following link to reset your password: http://localhost:5000/reset-password?token={token}'
+    mail.send(msg)
+
+    return jsonify({'message': 'Password reset instructions sent to your email'}), 200
+
+
+
+@app.route('/reset-password', methods=['GET'])
+def reset_password():
+    token = request.args.get('token')
+    print("token in get request:",token)
+    if not token:
+        return jsonify({'error': 'Token not provided'}), 400
+
+    # Find the user by the reset password token
+    user = db.users.find_one({'reset_password_token': token})
+    if not user:
+        return jsonify({'error': 'Invalid or expired token'}), 404
+
+    # Here you can render a password reset form or perform the password reset logic
+    return render_template('reset-pwd.html',token=token)
+   
+
+
+@app.route('/reset-password', methods=['POST'])
+def reset_pwd():
+    token = request.args.get('token')
+    print("in post",token)
+    if not token:
+        return jsonify({'error': 'Token not provided'}), 400
+
+    # Find the user by the reset password token
+    user = db.users.find_one({'reset_password_token': token})
+    if not user:
+        return jsonify({'error': 'Invalid or expired token'}), 404
+
+   
+
+    new_password = request.json.get('password')
+    if not new_password:
+        return jsonify({'error': 'New password not provided'}), 400
+
+    # Update the user's password in the database
+    # You may want to hash the password before saving it
+    # For example: hashed_password = hash_function(new_password)
+    db.users.update_one({'_id': user['_id']}, {'$set': {'password': new_password}})
+
+    # Optionally, clear the reset password token and expiry date
+    db.users.update_one({'_id': user['_id']}, {'$unset': {'reset_password_token': ''}})
+
+    return jsonify({'message': 'Password reset successfully'}), 200
+
+    
 
 @app.route('/predict_rf', methods=['POST'])
 def predict_rf():
@@ -280,13 +389,6 @@ def predict_rf():
         # Make prediction using the RandomForestClassifier model
         prediction = rf_model.predict(df)
         
-
-        
-        # Return prediction and accuracy as JSON
-        return jsonify({'prediction': prediction.tolist(), 'accuracy': rf_score * 100})
-
-
-# Prediction endpoint for SVM model
 
         
         # Return prediction and accuracy as JSON
@@ -311,8 +413,7 @@ def predict_svm():
         # Return prediction and accuracy as JSON
         return jsonify({'prediction': prediction.tolist(), 'accuracy': svm_score* 100})
              
-        # Return prediction and accuracy as JSON
-        return jsonify({'prediction': prediction.tolist(), 'accuracy': svm_score* 100})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
