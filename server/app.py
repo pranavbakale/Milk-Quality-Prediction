@@ -71,7 +71,7 @@ def upload_csv_to_mongodb(csv_data, file_name, user_name, user_id):
     milkdata_collection.insert_one(metadata)
  
     collection_name = re.sub(r'[^a-zA-Z0-9_]', '_', file_name.split('.')[0])
-
+    
     # Convert CSV data to a pandas DataFrame
     df = pd.read_csv(StringIO(csv_data))
     # Convert DataFrame to dictionary records
@@ -112,6 +112,7 @@ def upload_csv():
             return jsonify({'message': f'CSV data loaded successfully into MongoDB collection {file_name}'}), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
 
 
 
