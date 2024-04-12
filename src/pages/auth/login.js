@@ -53,35 +53,6 @@ const Page = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-
-          },
-          body: JSON.stringify(values),
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          localStorage.setItem('token', userData.token);
-          auth.signIn(userData);
-          auth.setAuthenticated(true);
-          router.push('/');
-        } else {
-          const errorData = await response.json();
-          helpers.setStatus({ success: false });
-          helpers.setErrors({ submit: errorData.error || 'Authentication failed' });
-
-          localStorage.setItem("token", userData.token);
-          auth.signIn(userData);
-          auth.setAuthenticated(true);
-          router.push("/");
-        } 
-      } catch (err) {
-        console.error(err);
-      }
-      try {
-        const response = await fetch("http://localhost:5000/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
           },
           body: JSON.stringify(values),
         });
