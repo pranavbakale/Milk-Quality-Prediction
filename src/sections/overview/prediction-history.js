@@ -1,108 +1,77 @@
-import { format } from 'date-fns';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import GetAppRoundedIcon from '@mui/icons-material/GetAppRounded';
-import ArrowRightIcon from '@heroicons/react/24/solid/ArrowRightIcon';
 import {
   Box,
-  Button,
   IconButton,
   Card,
-  CardActions,
   CardHeader,
-  Divider,
-  SvgIcon,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow
 } from '@mui/material';
-import { Scrollbar } from 'src/components/scrollbar';
-import { SeverityPill } from 'src/components/severity-pill';
-
-const statusMap = {
-  pending: 'warning',
-  delivered: 'success',
-  refunded: 'error'
-};
+import axios from 'axios'; 
 
 export const OverviewLatestOrders = (props) => {
-  const { orders = [], sx } = props;
+  const { sx } = props;
+  const [files, setFiles] = useState([]);
+
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/last-six-months-data');
+        setFiles(response.data); 
+      } catch (error) {
+        console.error('Error fetching files:', error);
+      }
+    };
+
+    fetchFiles(); 
+  }, []);
 
   return (
     <Card sx={sx}>
       <CardHeader title="Prediction History" />
-      <Scrollbar sx={{ flexGrow: 1 }}>
-        <Box sx={{ minWidth: '100%' }}>
-          <Table>
-            <TableHead>
-              <TableRow>
+      <Box sx={{ minWidth: '100%' }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                No.
+              </TableCell>
+              <TableCell>
+                File Name
+              </TableCell>
+              <TableCell>
+                Download
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {files.map((file, index) => (
+              <TableRow hover key={index}>
                 <TableCell>
-                  No.
+                  {index + 1}
                 </TableCell>
                 <TableCell>
-                  Dataset
-                </TableCell>
-                <TableCell sortDirection="desc">
-                  Date
+                  {file.file_name}
                 </TableCell>
                 <TableCell>
-                  Export
+                  <IconButton href={file.file_path} download>
+                    <GetAppRoundedIcon />
+                  </IconButton>
                 </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {orders.map((order) => {
-                const createdAt = format(order.createdAt, 'dd/MM/yyyy');
-
-                return (
-                  <TableRow
-                    hover
-                    key={order.id}
-                  >
-                    <TableCell>
-                      {order.no}
-                    </TableCell>
-                    <TableCell>
-                      {order.customer.name}
-                    </TableCell>
-                    <TableCell>
-                      {createdAt}
-                    </TableCell>
-                    <TableCell>
-                      <IconButton>
-                        <SvgIcon fontSize="big">
-                          <GetAppRoundedIcon />
-                        </SvgIcon>
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Box>
-      </Scrollbar>
-      <Divider />
-      <CardActions sx={{ justifyContent: 'flex-end' }}>
-        <Button
-          color="inherit"
-          endIcon={(
-            <SvgIcon fontSize="small">
-              <ArrowRightIcon />
-            </SvgIcon>
-          )}
-          size="small"
-          variant="text"
-        >
-          View all
-        </Button>
-      </CardActions>
+            ))}
+          </TableBody>
+        </Table>
+      </Box>
     </Card>
   );
 };
 
-OverviewLatestOrders.prototype = {
-  orders: PropTypes.array,
+OverviewLatestOrders.propTypes = {
   sx: PropTypes.object
 };
