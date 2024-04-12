@@ -28,6 +28,13 @@ export const Layout = withAuthGuard((props) => {
   const pathname = usePathname();
   const [openNav, setOpenNav] = useState(false);
   const [userName, setUserName] = useState(""); // State to store the username
+  const [userAvatar, setUserAvatar] = useState(""); // State to store the username
+
+  // Function to update userAvatar state
+  const updateUserAvatar = (newAvatar) => {
+    setUserAvatar(newAvatar);
+  };
+
 
   const handlePathnameChange = useCallback(
     () => {
@@ -68,6 +75,7 @@ export const Layout = withAuthGuard((props) => {
           const userData = await response.json();
           // console.log(userData);
           setUserName(userData.user.name);
+          setUserAvatar(userData.user.avatar);
         } else {
           throw new Error('Failed to fetch user details');
         }
@@ -76,12 +84,14 @@ export const Layout = withAuthGuard((props) => {
       }
     };
     fetchUserName();
-  }, []);
+  }, [setUserAvatar, setUserName]);
 
   return (
     <>
       <TopNav onNavOpen={() => setOpenNav(true)}
-        userName={userName} />
+        userName={userName}
+        userAvatar={userAvatar}
+        updateUserAvatar={updateUserAvatar} />
       <SideNav
         onClose={() => setOpenNav(false)}
         open={openNav}
