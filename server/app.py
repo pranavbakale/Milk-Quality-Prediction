@@ -1,6 +1,6 @@
 import pickle
 import secrets
-from flask import Flask, request, jsonify, session, render_template
+from flask import Flask, request, jsonify, session, render_template, send_from_directory
 from flask_mail import Mail, Message
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -9,12 +9,20 @@ from bson import ObjectId
 import random
 import string
 
-from sklearn.metrics import accuracy_score 
-from pandas import json_normalize
-from sklearn.model_selection import train_test_split
-from io import StringIO
-import re
-import datetime
+from werkzeug.utils import secure_filename
+import os
+import uuid  # Import UUID module
+
+app = Flask(__name__)
+CORS(app, supports_credentials=True)
+# Configure Flask-Mail with SMTP server details
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'abhidadavc@gmail.com'  # Your email address
+app.config['MAIL_PASSWORD'] = 'prwt zmlh zemc fpcd'  # Your email password
+
+mail = Mail(app)
 
 from sklearn.metrics import accuracy_score 
 from pandas import json_normalize
@@ -35,6 +43,7 @@ app.config['MAIL_PASSWORD'] = 'prwt zmlh zemc fpcd'  # Your email password
 mail = Mail(app)
 
 
+
 # MongoDB connection string
 MONGO_URL = "mongodb+srv://atharva00:atharva_db123@cluster-atga-dev-01.bvrwcjt.mongodb.net/?retryWrites=true&w=majority&appName=cluster-atga-dev-01"
 
@@ -42,18 +51,12 @@ client = MongoClient(MONGO_URL)
 user_db = client.user_database  # 'user_database' is the database name
 milk_db = client.Milk_Database
 milkdata_collection = milk_db.milkdata
-user_db = client.user_database  # 'user_database' is the database name
-milk_db = client.Milk_Database
-milkdata_collection = milk_db.milkdata
+
 try:
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
     print(e)
-
-
-app = Flask(__name__)
-CORS(app, supports_credentials=True)
 
 
 def upload_csv_to_mongodb(csv_data, file_name, user_name, user_id):
@@ -122,9 +125,6 @@ with open('svm_model.pkl', 'rb') as f:
     svm_model = pickle.load(f)
 
 
-
-CORS(app, supports_credentials=True)
-
 df = pd.read_csv("milknew.csv")
 
 # Define features and target variable
@@ -136,14 +136,6 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_
 rf_score = accuracy_score(y_test, rf_model.predict(X_test) )
 svm_score = accuracy_score(y_test, svm_model.predict(X_test))
 df = pd.read_csv("milknew.csv")
-
-X = df.drop('Grade', axis=1)
-y = df['Grade']
-
-
-
-rf_score = accuracy_score(y_test, rf_model.predict(X_test) )
-svm_score = accuracy_score(y_test, svm_model.predict(X_test))
 
 
 app.secret_key = 'your_secret_key_here'
@@ -181,7 +173,6 @@ def register_user():
         # Convert ObjectId to string in newUser
         newUser['_id'] = str(newUser['_id'])
         
-        
         return jsonify({'message': 'User registered successfully', 'userId': user_id_str, 'newUser': newUser}), 201
     
 @app.route('/login', methods=['POST'])
@@ -207,15 +198,15 @@ def login_user():
         else:
             return jsonify({'error': 'Invalid credentials'}), 401
 
-
-
 @app.route('/user-details', methods=['GET'])
 def get_user_details():
     token = request.args.get('token')
     if not token:
         return jsonify({'error': 'Token not provided'}), 400
 
+    
     user = user_db.users.find_one({"token": token})
+
     if user:
         # Convert ObjectId to string
         user['_id'] = str(user['_id'])
@@ -309,7 +300,7 @@ def forgot_password():
 @app.route('/reset-password', methods=['GET'])
 def reset_password():
     token = request.args.get('token')
-    print("token in get request:",token)
+    # print("token in get request:",token)
     if not token:
         return jsonify({'error': 'Token not provided'}), 400
 
@@ -326,7 +317,7 @@ def reset_password():
 @app.route('/reset-password', methods=['POST'])
 def reset_pwd():
     token = request.args.get('token')
-    print("in post",token)
+    # print("in post",token)
     if not token:
         return jsonify({'error': 'Token not provided'}), 400
 
@@ -334,7 +325,7 @@ def reset_pwd():
     user = user_db.users.find_one({'reset_password_token': token})
     if not user:
         return jsonify({'error': 'Invalid or expired token'}), 404
-   
+
     new_password = request.json.get('password')
     if not new_password:
         return jsonify({'error': 'New password not provided'}), 400
@@ -354,9 +345,19 @@ def reset_pwd():
 @app.route('/predict_rf', methods=['POST'])
 def predict_rf():
     if request.method == 'POST':
+
+        # Get data from the request
+        data = request.json
+        # Normalize JSON data into a DataFrame
+        df = json_normalize(data)
+      
+        # Make prediction using the RandomForestClassifier model
+        prediction = rf_model.predict(df)
+        
         data = request.json        
         df = json_normalize(data)  
         prediction = rf_model.predict(df)
+
         return jsonify({'prediction': prediction.tolist(), 'accuracy': rf_score * 100})
 
 
@@ -364,12 +365,75 @@ def predict_rf():
 @app.route('/predict_svm', methods=['POST'])
 def predict_svm():
     if request.method == 'POST':
+
+        # Get data from the request
+        data = request.json
+        
+        # Normalize JSON data into a DataFrame
+        df = json_normalize(data)
+        # Make prediction using the SVM model
+        prediction = svm_model.predict(df)
+
         data = request.json
         df = json_normalize(data)
         prediction = svm_model.predict(df)     
+
         # Return prediction and accuracy as JSON
         return jsonify({'prediction': prediction.tolist(), 'accuracy': svm_score* 100})
              
+UPLOAD_FOLDER = 'uploads/avatars'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/upload-avatar', methods=['POST'])
+def upload_avatar():
+    token = request.args.get('token')  # Retrieve token from query parameter
+    if token:
+        user = user_db.users.find_one({"token": token})
+        if user:
+            # Check if the post request has the file part
+            if 'avatar' not in request.files:
+                return jsonify({'error': 'No file provided'}), 400
+
+            file = request.files['avatar']
+
+            # If user does not select file, browser also submit an empty part without filename
+            if file.filename == '':
+                return jsonify({'error': 'No selected file'}), 400
+
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+
+                 # Generate a unique filename using UUID
+                unique_filename = str(uuid.uuid4()) + '.' + filename.rsplit('.', 1)[1].lower()
+
+                if 'avatar' in user:
+                    existing_avatar_path = os.path.join(app.config['UPLOAD_FOLDER'], str(user['avatar']))
+                    if os.path.exists(existing_avatar_path):
+                        os.remove(existing_avatar_path)
+
+                # Save the new avatar
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+
+                # Update user's avatar filename in the database
+                user_db.users.update_one({"token": token}, {"$set": {"avatar": unique_filename}})
+                return jsonify({'message': 'Avatar uploaded successfully'}), 200
+            else:
+                return jsonify({'error': 'Invalid file type'}), 400
+        else:
+            return jsonify({'error': 'User not found'}), 404
+    else:
+        return jsonify({'error': 'Token not provided'}), 401
+
+
+@app.route('/uploads/avatars/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 if __name__ == '__main__':

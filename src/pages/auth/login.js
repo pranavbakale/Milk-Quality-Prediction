@@ -1,9 +1,12 @@
-import { useCallback, useState, useEffect } from "react";
-import Head from "next/head";
-import NextLink from "next/link";
-import { useRouter } from "next/navigation";
-import { useFormik } from "formik";
-import * as Yup from "yup";
+
+import { useCallback, useState, useEffect } from 'react';
+import Head from 'next/head';
+import NextLink from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+
+
 import {
   Alert,
   Box,
@@ -46,16 +49,32 @@ const Page = () => {
     }),
     onSubmit: async (values, helpers) => {
       try {
+
+        const response = await fetch('http://localhost:5000/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+
         const response = await fetch("http://localhost:5000/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+
           },
           body: JSON.stringify(values),
         });
 
         if (response.ok) {
           const userData = await response.json();
+          localStorage.setItem('token', userData.token);
+          auth.signIn(userData);
+          auth.setAuthenticated(true);
+          router.push('/');
+        } else {
+          const errorData = await response.json();
+          helpers.setStatus({ success: false });
+          helpers.setErrors({ submit: errorData.error || 'Authentication failed' });
+
           localStorage.setItem("token", userData.token);
           auth.signIn(userData);
           auth.setAuthenticated(true);
@@ -93,10 +112,18 @@ const Page = () => {
       } catch (err) {
         console.error(err);
         helpers.setStatus({ success: false });
+
+        helpers.setErrors({ submit: 'Something went wrong' });
+        helpers.setSubmitting(false);
+      }
+    }
+
+
         helpers.setErrors({ submit: "Something went wrong" });
         helpers.setSubmitting(false);
       }
     },
+
   });
 
   const handleMethodChange = useCallback((event, value) => {
