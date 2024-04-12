@@ -79,6 +79,7 @@ const Page = () => {
       } catch (err) {
         console.error(err);
       }
+    }
   });
 
   const handleMethodChange = useCallback((event, value) => {
