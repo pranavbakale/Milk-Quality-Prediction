@@ -13,37 +13,22 @@ const now = new Date();
 
 const Page = () => {
   const [predictionResults, setPredictionResults] = useState({
-    rfPrediction: null,
-    svmPrediction: null,
-    rfAccuracy: null,
-    svmAccuracy: null,
+    prediction: null,
+    accuracy: null,
   });
 
   const handleInputFormSubmit = (formData) => {
     axios
-      .post("http://localhost:5000/predict_rf", formData)
+      .post("http://localhost:5000/predict", formData)
       .then((response) => {
         setPredictionResults((prevState) => ({
           ...prevState,
-          rfPrediction: response.data.prediction,
-          rfAccuracy: response.data.accuracy,
+          prediction: response.data.prediction,
+          accuracy: response.data.accuracy,
         }));
       })
       .catch((error) => {
         console.error("Error predicting with RF model:", error);
-      });
-
-    axios
-      .post("http://localhost:5000/predict_svm", formData)
-      .then((response) => {
-        setPredictionResults((prevState) => ({
-          ...prevState,
-          svmPrediction: response.data.prediction,
-          svmAccuracy: response.data.accuracy,
-        }));
-      })
-      .catch((error) => {
-        console.error("Error predicting with SVM model:", error);
       });
   };
 
@@ -71,10 +56,9 @@ const Page = () => {
             <Grid item xs={12} md={6} lg={8}>
               <InputForm onSubmit={handleInputFormSubmit} />
               <PredictionResult
-                rfPrediction={predictionResults.rfPrediction}
-                svmPrediction={predictionResults.svmPrediction}
-                rfAccuracy={predictionResults.rfAccuracy}
-                svmAccuracy={predictionResults.svmAccuracy}
+                prediction={predictionResults.prediction}
+                accuracy={predictionResults.accuracy}
+                
               />
             </Grid>
             <Grid item xs={12} md={12} lg={8}>
