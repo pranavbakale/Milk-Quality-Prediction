@@ -6,7 +6,6 @@ from flask_cors import CORS
 from pymongo import MongoClient
 import pandas as pd
 from bson import ObjectId
-
 import random
 import string
 
@@ -31,6 +30,18 @@ from sklearn.model_selection import train_test_split
 from io import StringIO
 import re
 import datetime
+app = Flask(__name__)
+CORS(app, supports_credentials=True)
+
+# Configure Flask-Mail with SMTP server details
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'abhidadavc@gmail.com'  # Your email address
+app.config['MAIL_PASSWORD'] = 'prwt zmlh zemc fpcd'  # Your email password
+
+mail = Mail(app)
+
 
 
 # MongoDB connection string
@@ -119,19 +130,15 @@ df = pd.read_csv("milknew.csv")
 X = df.drop('Grade', axis=1)
 y = df['Grade']
 
-# Split the data into training and testing sets
-
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=40)
-
 
 rf_score = accuracy_score(y_test, rf_model.predict(X_test) )
 svm_score = accuracy_score(y_test, svm_model.predict(X_test))
 df = pd.read_csv("milknew.csv")
 
-# Set secret key for session management
+
 app.secret_key = 'your_secret_key_here'
 
-# Function to generate a random token
 def generate_token():
     return secrets.token_hex(16)
 
@@ -148,11 +155,9 @@ def register_user():
         if not (name and email and password):
             return jsonify({'error': 'Missing name, email, or password'}), 400
 
-        # Check if the user already exists
         if user_db.users.find_one({"email": email}):
             return jsonify({"error": "User already exists"}), 409
 
-        # Generate token for the user
         token = generate_token()
 
         # Construct the new user object
@@ -161,7 +166,7 @@ def register_user():
         # Insert the new user with token
         user_id = user_db.users.insert_one(newUser).inserted_id
         
-        # Convert user_id to string
+
         user_id_str = str(user_id)
 
         # Convert ObjectId to string in newUser
@@ -188,11 +193,6 @@ def login_user():
                 session['token'] = user.get('token')
             except Exception as e:
                 print(e)
-            # print("in login post req")
-            # print(user)
-            # print(session['token'])
-            
-            # sessionStorage.setItem('token', 'your_token_here');
             return jsonify({'message': 'Login successful','token':session['token']}), 200
         else:
             return jsonify({'error': 'Invalid credentials'}), 401
@@ -202,6 +202,7 @@ def get_user_details():
     token = request.args.get('token')
     if not token:
         return jsonify({'error': 'Token not provided'}), 400
+
     
     user = user_db.users.find_one({"token": token})
 
@@ -343,6 +344,7 @@ def reset_pwd():
 @app.route('/predict_rf', methods=['POST'])
 def predict_rf():
     if request.method == 'POST':
+
         # Get data from the request
         data = request.json
         # Normalize JSON data into a DataFrame
@@ -351,7 +353,10 @@ def predict_rf():
         # Make prediction using the RandomForestClassifier model
         prediction = rf_model.predict(df)
         
-        # Return prediction and accuracy as JSON
+        data = request.json        
+        df = json_normalize(data)  
+        prediction = rf_model.predict(df)
+
         return jsonify({'prediction': prediction.tolist(), 'accuracy': rf_score * 100})
 
 
@@ -359,6 +364,7 @@ def predict_rf():
 @app.route('/predict_svm', methods=['POST'])
 def predict_svm():
     if request.method == 'POST':
+
         # Get data from the request
         data = request.json
         
@@ -366,7 +372,11 @@ def predict_svm():
         df = json_normalize(data)
         # Make prediction using the SVM model
         prediction = svm_model.predict(df)
-             
+
+        data = request.json
+        df = json_normalize(data)
+        prediction = svm_model.predict(df)     
+
         # Return prediction and accuracy as JSON
         return jsonify({'prediction': prediction.tolist(), 'accuracy': svm_score* 100})
              
