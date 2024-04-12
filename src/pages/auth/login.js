@@ -48,6 +48,7 @@ const Page = () => {
       password: Yup.string().max(255).required("Password is required"),
     }),
     onSubmit: async (values, helpers) => {
+
       try {
 
         const response = await fetch("http://localhost:5000/login", {
@@ -78,7 +79,6 @@ const Page = () => {
       } catch (err) {
         console.error(err);
       }
-    }
   });
 
   const handleMethodChange = useCallback((event, value) => {
