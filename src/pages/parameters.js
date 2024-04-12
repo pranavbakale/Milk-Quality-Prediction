@@ -1,16 +1,16 @@
 import Head from 'next/head';
 import { Layout as DashboardLayout } from 'src/layouts/dashboard/layout';
-import { Hello } from 'src/sections/customer/customers-table';
+import {MilkQualityInfo} from 'src/sections/customer/customers-table';
 
 
 const Page = () => (
   <>
     <Head>
       <title>
-        Customers
+        Data Parameters
       </title>
     </Head>
-    <Hello />
+    <MilkQualityInfo />
   </>
 );
 
