@@ -12,6 +12,13 @@ import string
 from werkzeug.utils import secure_filename
 import os
 import uuid  # Import UUID module
+import pandas as pd
+import numpy as np
+import pickle
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
@@ -113,29 +120,47 @@ def upload_csv():
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+with open('ensemble_model.pkl', 'rb') as f:
+    rf_model, svm_model, meta_model, acccuracy = pickle.load(f)
 
+# Load the dataset
+df = pd.read_csv('milknew.csv')
+grade_mapping = {'low': 0, 'medium': 1, 'high': 2}
 
-
-# Load the trained RandomForestClassifier model using pickle
-with open('random_forest_model.pkl', 'rb') as f:
-    rf_model = pickle.load(f)
-
-# Load the trained SVM model using pickle
-with open('svm_model.pkl', 'rb') as f:
-    svm_model = pickle.load(f)
-
-
-df = pd.read_csv("milknew.csv")
-
+# Map the categorical values to numerical values
+df['Grade'] = df['Grade'].map(grade_mapping)
 # Define features and target variable
 X = df.drop('Grade', axis=1)
 y = df['Grade']
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=40)
+# Define preprocessing steps (standardization for numerical features)
+numerical_features = ['Taste', 'Odor', 'Colour']
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numerical_features)
+    ],
+    remainder='passthrough'
+)
 
-rf_score = accuracy_score(y_test, rf_model.predict(X_test) )
-svm_score = accuracy_score(y_test, svm_model.predict(X_test))
-df = pd.read_csv("milknew.csv")
+# Fit and transform the entire dataset
+X_encoded = preprocessor.fit_transform(X)
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.4, random_state=42)
+
+# Train the base models
+rf_model.fit(X_train, y_train)
+svm_model.fit(X_train, y_train)
+
+# Generate predictions from base models
+rf_predictions = rf_model.predict(X_test)
+svm_predictions = svm_model.predict(X_test)
+
+# Create a new dataset with base model predictions as features
+X_stacked = np.column_stack((rf_predictions, svm_predictions))
+
+# Train the meta-model (Logistic Regression) on the stacked dataset
+meta_model.fit(X_stacked, y_test)
 
 
 app.secret_key = 'your_secret_key_here'
@@ -340,47 +365,33 @@ def reset_pwd():
 
     return jsonify({'message': 'Password reset successfully'}), 200
 
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    data = request.json
+    df = json_normalize(data)
+    # Perform preprocessing
+    data_encoded = preprocessor.transform(df)
     
+    # Generate predictions from base models
+    rf_prediction = rf_model.predict(data_encoded)
+    svm_prediction = svm_model.predict(data_encoded)
+    
+    # Create a new dataset with base model predictions as features
+    X_stacked = np.column_stack((rf_prediction, svm_prediction))
 
-@app.route('/predict_rf', methods=['POST'])
-def predict_rf():
-    if request.method == 'POST':
+    # Make prediction using the meta-model
+    meta_prediction = meta_model.predict(X_stacked)
 
-        # Get data from the request
-        data = request.json
-        # Normalize JSON data into a DataFrame
-        df = json_normalize(data)
-      
-        # Make prediction using the RandomForestClassifier model
-        prediction = rf_model.predict(df)
-        
-        data = request.json        
-        df = json_normalize(data)  
-        prediction = rf_model.predict(df)
+    if(meta_prediction[0]==0):
+        pred = 'low'
+    elif(meta_prediction[0]==1):
+        pred= 'medium'
+    else:
+        pred='high'
+    approximated_accuracy = round(acccuracy * 100, 2)
+    return jsonify({'prediction': pred, 'accuracy':  approximated_accuracy})
 
-        return jsonify({'prediction': prediction.tolist(), 'accuracy': rf_score * 100})
-
-
-# Prediction endpoint for SVM model
-@app.route('/predict_svm', methods=['POST'])
-def predict_svm():
-    if request.method == 'POST':
-
-        # Get data from the request
-        data = request.json
-        
-        # Normalize JSON data into a DataFrame
-        df = json_normalize(data)
-        # Make prediction using the SVM model
-        prediction = svm_model.predict(df)
-
-        data = request.json
-        df = json_normalize(data)
-        prediction = svm_model.predict(df)     
-
-        # Return prediction and accuracy as JSON
-        return jsonify({'prediction': prediction.tolist(), 'accuracy': svm_score* 100})
-             
 UPLOAD_FOLDER = 'uploads/avatars'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
