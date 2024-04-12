@@ -1,206 +1,107 @@
-export const  Hello = () => {
+import React from 'react';
+import { Box, Typography, Grid, Paper } from '@mui/material';
+
+export const MilkQualityInfo = () => {
+  const renderColorBoxes = () => {
+    const colorBoxes = [];
+    for (let i = 240; i <= 255; i++) {
+      const color = `rgb(${i},${i},${i})`;
+      colorBoxes.push(
+        <Grid item key={color}>
+          <Typography>{i}</Typography>
+          <Box bgcolor={color} width={30} height={30} border="1px solid #ccc" />
+        </Grid>
+      );
+    }
+    return colorBoxes;
+  };
   return (
-      <h1> Customers </h1>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-{/*
-
-import PropTypes from 'prop-types';
-import { format } from 'date-fns';
-import {
-  Avatar,
-  Box,
-  Card,
-  Checkbox,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TablePagination,
-  TableRow,
-  Typography
-} from '@mui/material';
-import { Scrollbar } from 'src/components/scrollbar';
-import { getInitials } from 'src/utils/get-initials';
-
-export const CustomersTable = (props) => {
-  const {
-    count = 0,
-    items = [],
-    onDeselectAll,
-    onDeselectOne,
-    onPageChange = () => {},
-    onRowsPerPageChange,
-    onSelectAll,
-    onSelectOne,
-    page = 0,
-    rowsPerPage = 0,
-    selected = []
-  } = props;
-
-  const selectedSome = (selected.length > 0) && (selected.length < items.length);
-  const selectedAll = (items.length > 0) && (selected.length === items.length);
-
-  return (
-    <Card>
-      <Scrollbar>
-        <Box sx={{ minWidth: 800 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    checked={selectedAll}
-                    indeterminate={selectedSome}
-                    onChange={(event) => {
-                      if (event.target.checked) {
-                        onSelectAll?.();
-                      } else {
-                        onDeselectAll?.();
-                      }
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  Name
-                </TableCell>
-                <TableCell>
-                  Email
-                </TableCell>
-                <TableCell>
-                  Location
-                </TableCell>
-                <TableCell>
-                  Phone
-                </TableCell>
-                <TableCell>
-                  Signed Up
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {items.map((customer) => {
-                const isSelected = selected.includes(customer.id);
-                const createdAt = format(customer.createdAt, 'dd/MM/yyyy');
-
-                return (
-                  <TableRow
-                    hover
-                    key={customer.id}
-                    selected={isSelected}
-                  >
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        checked={isSelected}
-                        onChange={(event) => {
-                          if (event.target.checked) {
-                            onSelectOne?.(customer.id);
-                          } else {
-                            onDeselectOne?.(customer.id);
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Stack
-                        alignItems="center"
-                        direction="row"
-                        spacing={2}
-                      >
-                        <Avatar src={customer.avatar}>
-                          {getInitials(customer.name)}
-                        </Avatar>
-                        <Typography variant="subtitle2">
-                          {customer.name}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-                    <TableCell>
-                      {customer.email}
-                    </TableCell>
-                    <TableCell>
-                      {customer.address.city}, {customer.address.state}, {customer.address.country}
-                    </TableCell>
-                    <TableCell>
-                      {customer.phone}
-                    </TableCell>
-                    <TableCell>
-                      {createdAt}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Box>
-      </Scrollbar>
-      <TablePagination
-        component="div"
-        count={count}
-        onPageChange={onPageChange}
-        onRowsPerPageChange={onRowsPerPageChange}
-        page={page}
-        rowsPerPage={rowsPerPage}
-        rowsPerPageOptions={[5, 10, 25]}
-      />
-    </Card>
+    <Box mt={4} ml={4} mr={4}>
+      <Typography variant="h5" align="center" mb={2}>Data Parameters</Typography>
+      <Grid container spacing={3}>
+        {/* pH */}
+        <Grid item xs={12} sm={4}>
+          <Paper variant="outlined" sx={{ p: 4, '&:hover': { boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' } }}>
+            <Typography variant="h6">pH</Typography>
+            <Typography>
+              pH value of the milk. Range: 3 to 9.5. Optimal: 6.25 to 6.90.
+            </Typography>
+          </Paper>
+        </Grid>
+        {/* Temperature */}
+        <Grid item xs={12} sm={4}>
+          <Paper variant="outlined" sx={{ p: 4, '&:hover': { boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' } }}>
+            <Typography variant="h6">Temperature</Typography>
+            <Typography>
+              Temperature of the milk in Celsius. Range: 34°C to 90°C. Optimal: 34°C to 45.20°C.
+            </Typography>
+          </Paper>
+        </Grid>
+        {/* Taste */}
+        <Grid item xs={12} sm={4}>
+          <Paper variant="outlined" sx={{ p: 4, '&:hover': { boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' } }}>
+            <Typography variant="h6">Taste</Typography>
+            <Typography>
+              Categorical data representing taste. Values: 0 (Bad) or 1 (Good).
+            </Typography>
+          </Paper>
+        </Grid>
+        {/* Odor */}
+        <Grid item xs={12} sm={4}>
+          <Paper variant="outlined" sx={{ p: 4, '&:hover': { boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' } }}>
+            <Typography variant="h6">Odor</Typography>
+            <Typography>
+              Categorical data representing odor. Values: 0 (Bad) or 1 (Good).
+            </Typography>
+          </Paper>
+        </Grid>
+        {/* Fat */}
+        <Grid item xs={12} sm={4}>
+          <Paper variant="outlined" sx={{ p: 4, '&:hover': { boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' } }}>
+            <Typography variant="h6">Fat</Typography>
+            <Typography>
+              Categorical data representing fat content. Values: 0 (Low) or 1 (High).
+            </Typography>
+          </Paper>
+        </Grid>
+        {/* Turbidity */}
+        <Grid item xs={12} sm={4}>
+          <Paper variant="outlined" sx={{ p: 4, '&:hover': { boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' } }}>
+            <Typography variant="h6">Turbidity</Typography>
+            <Typography>
+              Categorical data representing turbidity. Values: 0 (Low) or 1 (High).
+            </Typography>
+          </Paper>
+        </Grid>
+        {/* Colour */}
+        <Grid item xs={12} sm={8}>
+          <Paper variant="outlined" sx={{ p: 2.35, '&:hover': { boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' } }}>
+            <Typography variant="h6">Colour</Typography>
+            <Typography>
+              Colour of the milk. Range: 240 to 255.
+            </Typography>
+            <Grid container spacing={2}>
+              {renderColorBoxes().map((colorBox, index) => (
+                <Grid item key={index}>
+                  {colorBox}
+                </Grid>
+              ))}
+            </Grid>
+          </Paper>
+        </Grid>
+        {/* Grade */}
+        <Grid item xs={12} sm={4}>
+          <Paper variant="outlined" sx={{ p: 4, '&:hover': { boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' } }}>
+            <Typography variant="h6">Grade (Target)</Typography>
+            <Typography>
+              Categorical data representing milk grade. Values: Low (Bad), Medium (Moderate), High.
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>  
+    </Box>
+    
   );
 };
 
-CustomersTable.propTypes = {
-  count: PropTypes.number,
-  items: PropTypes.array,
-  onDeselectAll: PropTypes.func,
-  onDeselectOne: PropTypes.func,
-  onPageChange: PropTypes.func,
-  onRowsPerPageChange: PropTypes.func,
-  onSelectAll: PropTypes.func,
-  onSelectOne: PropTypes.func,
-  page: PropTypes.number,
-  rowsPerPage: PropTypes.number,
-  selected: PropTypes.array
-};
-
-*/}
+export default MilkQualityInfo;

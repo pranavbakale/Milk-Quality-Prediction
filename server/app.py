@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-
+from datetime import datetime
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 # Configure Flask-Mail with SMTP server details
@@ -37,6 +37,7 @@ from sklearn.model_selection import train_test_split
 from io import StringIO
 import re
 import datetime
+from dateutil.relativedelta import relativedelta
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
@@ -67,7 +68,6 @@ except Exception as e:
 
 
 def upload_csv_to_mongodb(csv_data, file_name, user_name, user_id):
-    
     # Create metadata dictionary
     metadata = {
         'file_name': file_name,
@@ -75,16 +75,22 @@ def upload_csv_to_mongodb(csv_data, file_name, user_name, user_id):
         'user_name': user_name,
         'user_id': user_id
     }
-    milkdata_collection.insert_one(metadata)
- 
-    collection_name = re.sub(r'[^a-zA-Z0-9_]', '_', file_name.split('.')[0])
+    current_date_time = datetime.datetime.now()
+    formatted_date_time = current_date_time.strftime('%b_%d_%f')
+    print("Metadata:", metadata)  # Print metadata dictionary
+    
+    collection_name = re.sub(r'[^a-zA-Z0-9_]', '_', file_name.split('.')[0]+formatted_date_time)
+    print("Collection name:", collection_name)  # Print collection name
     
     # Convert CSV data to a pandas DataFrame
     df = pd.read_csv(StringIO(csv_data))
     # Convert DataFrame to dictionary records
     records = df.to_dict(orient='records')
+    print("Records:", records)  # Print records
     # Insert records into MongoDB collection
     milk_db[collection_name].insert_many(records)
+    milkdata_collection.insert_one(metadata)
+
 
 
 @app.route('/upload-csv', methods=['POST'])
@@ -372,7 +378,6 @@ def predict():
     df = json_normalize(data)
     # Perform preprocessing
     data_encoded = preprocessor.transform(df)
-    
     # Generate predictions from base models
     rf_prediction = rf_model.predict(data_encoded)
     svm_prediction = svm_model.predict(data_encoded)
@@ -390,6 +395,35 @@ def predict():
     else:
         pred='high'
     approximated_accuracy = round(acccuracy * 100, 2)
+    pH = data.get('pH')
+    temperature = data.get('Temperature')
+    taste = data.get('Taste')
+    odor = data.get('Odor')
+    fat = data.get('Fat')
+    turbidity = data.get('Turbidity')
+    colour = data.get('Colour')
+    current_date = datetime.datetime.now().strftime('%d-%b-%Y')
+    current_month = datetime.datetime.now().month
+    current_year = datetime.datetime.now().year
+    user_token = request.args.get('token')
+    user = user_db.users.find_one({"token": user_token})
+    user_name = user.get('name')
+    Grade = pred
+    prediction_data = {
+        'date': current_date,
+        'user_name': user_name,
+        'month': current_month,
+        'year': current_year,
+        'pH': pH,
+        'Temperature': temperature,
+        'Taste': taste,
+        'Odor': odor,
+        'Fat':fat,
+        'Turbidity':turbidity,
+        'Colour':colour,
+        'Grade': Grade
+    }
+    milk_db.milk_prediction_result.insert_one(prediction_data)
     return jsonify({'prediction': pred, 'accuracy':  approximated_accuracy})
 
 UPLOAD_FOLDER = 'uploads/avatars'
@@ -445,6 +479,61 @@ def upload_avatar():
 @app.route('/uploads/avatars/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+
+@app.route('/last-six-months-data', methods=['GET'])
+def get_last_six_months_data():
+    files = []
+
+    # Get the current year and month
+    current_year = datetime.datetime.now().year
+    current_month = datetime.datetime.now().month
+
+    # Iterate over the past six months, including the current month
+    for i in range(6):
+
+        # Calculate the target month and year
+        target_month = current_month - i
+        target_year = current_year
+
+        # Adjust year if the target month is in the previous year
+        if target_month <= 0:
+            target_month += 12
+            target_year -= 1
+
+        # Query MongoDB to check if data exists for the target month
+        data_exists = milk_db.milk_prediction_result.find_one(
+            {'month': target_month, 'year': target_year}
+        )
+
+        # If data exists, proceed to fetch and create the CSV file
+        if data_exists:
+            # Query MongoDB to fetch data for the target month
+            current_month_data_cursor = milk_db.milk_prediction_result.find(
+                {'month': target_month, 'year': target_year},
+                {'_id': 0}
+            )
+
+            # Convert cursor to DataFrame
+            current_month_data_df = pd.DataFrame(list(current_month_data_cursor))
+
+            # Generate the file name
+            month_year_str = datetime.datetime(target_year, target_month, 1).strftime('%b%Y')
+            csv_file_name = f'milk_data_{month_year_str}.csv'
+
+            # Generate the file path
+            csv_file_path = os.path.join(app.root_path, csv_file_name)
+
+            # Save the DataFrame to a CSV file
+            current_month_data_df.to_csv(csv_file_path, index=False)
+
+            # Append file details to the list
+            files.append({'file_name': csv_file_name, 'file_path': csv_file_path})
+
+    return jsonify(files)
+
+
 
 
 if __name__ == '__main__':
