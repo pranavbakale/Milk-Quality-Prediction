@@ -49,12 +49,6 @@ const Page = () => {
     }),
     onSubmit: async (values, helpers) => {
       try {
-
-        const response = await fetch('http://localhost:5000/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-
         const response = await fetch("http://localhost:5000/login", {
           method: "POST",
           headers: {
@@ -79,12 +73,7 @@ const Page = () => {
           auth.signIn(userData);
           auth.setAuthenticated(true);
           router.push("/");
-        } else {
-          const errorData = await response.json();
-          helpers.setStatus({ success: false });
-          helpers.setErrors({ submit: errorData.error || "Authentication failed" });
-          helpers.setSubmitting(false);
-        }
+        } 
       } catch (err) {
         console.error(err);
       }
@@ -117,13 +106,6 @@ const Page = () => {
         helpers.setSubmitting(false);
       }
     }
-
-
-        helpers.setErrors({ submit: "Something went wrong" });
-        helpers.setSubmitting(false);
-      }
-    },
-
   });
 
   const handleMethodChange = useCallback((event, value) => {
