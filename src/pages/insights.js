@@ -1,20 +1,20 @@
-import Head from 'next/head';
-import { Box, Container, Stack, Typography } from '@mui/material';
-import { SettingsNotifications } from 'src/sections/settings/settings-notifications';
-import { SettingsPassword } from 'src/sections/settings/settings-password';
-import { Layout as DashboardLayout } from 'src/layouts/dashboard/layout';
-import { Hello } from 'src/sections/insights/insights-info';
 
-const Page = () => (
-  <>
+import Head from 'next/head';
+import { Layout as DashboardLayout } from 'src/layouts/dashboard/layout';
+import {InsightPage} from 'src/sections/insights/insights-info';
+
+
+const Page = () =>{
+  return( 
+    <>
     <Head>
       <title>
-        Insights
+        Data Parameters
       </title>
     </Head>
-    <Hello />
+    <InsightPage />
   </>
-);
+)};
 
 
 Page.getLayout = (page) => (
