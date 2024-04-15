@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Head from "next/head";
 import { Box, Container, Grid } from "@mui/material";
@@ -16,19 +16,32 @@ const Page = () => {
     prediction: null,
     accuracy: null,
   });
+  const [fetchTrigger, setFetchTrigger] = useState(false);
+  const [token, setToken] = useState(""); // State to store the token
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+      console.log("Token:", storedToken); // Log the token after it's retrieved
+    } else {
+      // Handle case where token is not available in session storage
+      console.error("Token not found in session storage.");
+    }
+  }, []); // Run this effect only once on component mount
 
   const handleInputFormSubmit = (formData) => {
     axios
-      .post("http://localhost:5000/predict", formData)
+      .post(`http://localhost:5000/predict?token=${token}`, formData)
       .then((response) => {
-        setPredictionResults((prevState) => ({
-          ...prevState,
+        setPredictionResults({
           prediction: response.data.prediction,
           accuracy: response.data.accuracy,
-        }));
+        });
+        setFetchTrigger((prev) => !prev); // Toggle fetch trigger
       })
       .catch((error) => {
-        console.error("Error predicting with RF model:", error);
+        console.error("Error predicting with Ensemble model:", error);
       });
   };
 
@@ -58,48 +71,21 @@ const Page = () => {
               <PredictionResult
                 prediction={predictionResults.prediction}
                 accuracy={predictionResults.accuracy}
-                
               />
             </Grid>
             <Grid item xs={12} md={12} lg={8}>
               <OverviewLatestOrders
-                orders={[
-                  {
-                    id: "f69f88012978187a6c12897f",
-                    no: "1",
-                    customer: { name: "Milk_Apr_2019" },
-                    createdAt: 1555016400000,
-                  },
-                  {
-                    id: "f69f88012978187a6c12897f",
-                    no: "2",
-                    customer: { name: "Milk_Apr_2019" },
-                    createdAt: 1555016400000,
-                  },
-                  {
-                    id: "f69f88012978187a6c12897f",
-                    no: "3",
-                    customer: { name: "Milk_Apr_2019" },
-                    createdAt: 1555016400000,
-                  },
-                  {
-                    id: "f69f88012978187a6c12897f",
-                    no: "4",
-                    customer: { name: "Milk_Apr_2019" },
-                    createdAt: 1555016400000,
-                  },
-                  {
-                    id: "f69f88012978187a6c12897f",
-                    no: "5",
-                    customer: { name: "Milk_Apr_2019" },
-                    createdAt: 1555016400000,
-                  },
-                ]}
+                fetchTrigger={fetchTrigger} // Pass fetch trigger as prop
                 sx={{ height: "100%" }}
               />
             </Grid>
             <Grid item xs={6} md={12} lg={4}>
-              <ImportData difference={16} positive={false} sx={{ height: "100%" }} value="1.6k" />
+              <ImportData
+                difference={16}
+                positive={false}
+                sx={{ height: "100%" }}
+                value="1.6k"
+              />
             </Grid>
           </Grid>
         </Container>

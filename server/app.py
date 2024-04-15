@@ -320,7 +320,7 @@ def forgot_password():
     user_db.users.update_one({'email': email}, {'$set': {'reset_password_token': token}})
 
     # Send an email to the user with a password reset link containing the token
-    msg = Message('Password Reset', sender='abhivc12@gmail.com', recipients=[email])
+    msg = Message('Password Reset', sender='abhidadavc@gmail.com', recipients=[email])
     msg.body = f'Please click the following link to reset your password: http://localhost:5000/reset-password?token={token}'
     mail.send(msg)
 
@@ -407,11 +407,13 @@ def predict():
     current_year = datetime.datetime.now().year
     user_token = request.args.get('token')
     user = user_db.users.find_one({"token": user_token})
-    user_name = user.get('name')
+    user_id = user.get('_id')
+    time = datetime.datetime.now().strftime("%H:%M:%S")
     Grade = pred
     prediction_data = {
+        'user_id':user_id,
+        'time': time,
         'date': current_date,
-        'user_name': user_name,
         'month': current_month,
         'year': current_year,
         'pH': pH,
@@ -482,57 +484,75 @@ def uploaded_file(filename):
 
 
 
-@app.route('/last-six-months-data', methods=['GET'])
+@app.route('/last-six-months-data', methods=['POST'])
 def get_last_six_months_data():
     files = []
-
-    # Get the current year and month
+    user_token = request.args.get('token')
+    user = user_db.users.find_one({'token':user_token})
+    user_id = user.get('_id')
     current_year = datetime.datetime.now().year
     current_month = datetime.datetime.now().month
 
-    # Iterate over the past six months, including the current month
     for i in range(6):
-
-        # Calculate the target month and year
         target_month = current_month - i
         target_year = current_year
-
-        # Adjust year if the target month is in the previous year
         if target_month <= 0:
             target_month += 12
             target_year -= 1
 
-        # Query MongoDB to check if data exists for the target month
         data_exists = milk_db.milk_prediction_result.find_one(
-            {'month': target_month, 'year': target_year}
+            {'month': target_month, 'year': target_year,'user_id': user_id}
         )
-
-        # If data exists, proceed to fetch and create the CSV file
+     
         if data_exists:
-            # Query MongoDB to fetch data for the target month
             current_month_data_cursor = milk_db.milk_prediction_result.find(
-                {'month': target_month, 'year': target_year},
+                {'month': target_month, 'year': target_year , 'user_id':user_id},
                 {'_id': 0}
             )
 
-            # Convert cursor to DataFrame
             current_month_data_df = pd.DataFrame(list(current_month_data_cursor))
-
-            # Generate the file name
+            columns_to_keep = ['date','time','pH', 'Temperature', 'Taste', 'Odor', 'Fat', 'Turbidity', 'Colour', 'Grade']
+            current_month_data_df = current_month_data_df[columns_to_keep]
             month_year_str = datetime.datetime(target_year, target_month, 1).strftime('%b%Y')
             csv_file_name = f'milk_data_{month_year_str}.csv'
-
-            # Generate the file path
+            #file path
             csv_file_path = os.path.join(app.root_path, csv_file_name)
-
-            # Save the DataFrame to a CSV file
             current_month_data_df.to_csv(csv_file_path, index=False)
 
-            # Append file details to the list
             files.append({'file_name': csv_file_name, 'file_path': csv_file_path})
 
     return jsonify(files)
 
+
+
+# API endpoint to get pH data
+@app.route('/api/pH')
+def get_pH_data():
+    pH_data = df['pH'].tolist()
+    return jsonify(pH_data)
+
+# API endpoint to get temperature data
+@app.route('/api/temperature')
+def get_temperature_data():
+    temperature_data = df['Temperature'].tolist()
+    return jsonify(temperature_data)
+
+# API endpoint to get color data
+@app.route('/api/color')
+def get_color_data():
+    color_data = df['Colour'].value_counts().to_dict()
+    return jsonify(color_data)
+
+@app.route('/get-last-50-predictions')
+def get_last_50_predictions():
+    # Fetch the last 50 entries from the prediction database
+    last_50_predictions = list(milk_db.milk_prediction_result.find().sort("_id", -1).limit(50))
+    
+    # Remove the _id field from each document
+    for prediction in last_50_predictions:
+        prediction.pop('_id', None)
+    
+    return jsonify(last_50_predictions)
 
 
 

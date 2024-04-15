@@ -16,7 +16,8 @@ import {
 
 
 export const InputForm = ({ onSubmit }) => {
-
+  const token = sessionStorage.getItem('token');
+  console.log(token);
   const [formData, setFormData] = useState({
     pH: '',
     Temperature: '',
