@@ -1,23 +1,17 @@
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
-import axios from 'axios';
-
 import {
   Box,
   Button,
   Card,
   CardContent,
-  CardHeader,
   Stack,
-  Typography,
   TextField,
-
+  Typography,
+  MenuItem
 } from '@mui/material';
 
-
 export const InputForm = ({ onSubmit }) => {
-  const token = sessionStorage.getItem('token');
-  console.log(token);
   const [formData, setFormData] = useState({
     pH: '',
     Temperature: '',
@@ -25,7 +19,7 @@ export const InputForm = ({ onSubmit }) => {
     Odor: '',
     Fat: '',
     Turbidity: '',
-    Colour: ''
+    Colour: '',
   });
   const [errors, setErrors] = useState({
     pH: '',
@@ -34,13 +28,12 @@ export const InputForm = ({ onSubmit }) => {
     Odor: '',
     Fat: '',
     Turbidity: '',
-    Colour: ''
+    Colour: '',
   });
   const [touchedFields, setTouchedFields] = useState({});
 
-  const validateField = (fieldName) => {
+  const validateField = (fieldName, value) => {
     let errorMessage = '';
-    const value = formData[fieldName];
 
     switch (fieldName) {
       case 'pH':
@@ -55,14 +48,14 @@ export const InputForm = ({ onSubmit }) => {
         break;
       case 'Taste':
       case 'Odor':
-        if (value.toLowerCase() !== 'good' && value.toLowerCase() !== 'bad') {
-          errorMessage = `${fieldName} should be either good or bad`;
+        if (!['good', 'bad'].includes(value.toLowerCase())) {
+          errorMessage = `${fieldName} should be either 'good' or 'bad'`;
         }
         break;
       case 'Fat':
       case 'Turbidity':
-        if (value.toLowerCase() !== 'low' && value.toLowerCase() !== 'high') {
-          errorMessage = `${fieldName} should be either low or high`;
+        if (!['low', 'high'].includes(value.toLowerCase())) {
+          errorMessage = `${fieldName} should be either 'low' or 'high'`;
         }
         break;
       case 'Colour':
@@ -74,18 +67,13 @@ export const InputForm = ({ onSubmit }) => {
         break;
     }
 
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      [fieldName]: errorMessage
-    }));
-
     return errorMessage;
   };
 
   const handleBlur = (fieldName) => {
     setTouchedFields((prevTouchedFields) => ({
       ...prevTouchedFields,
-      [fieldName]: true
+      [fieldName]: true,
     }));
   };
 
@@ -93,47 +81,46 @@ export const InputForm = ({ onSubmit }) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
 
-    // If the field has been touched, validate it on change
-    if (touchedFields[name]) {
-      validateField(name);
-    }
+    const fieldErrorMessage = validateField(name, value);
+    setErrors((prevErrors) => ({
+      ...prevErrors,
+      [name]: fieldErrorMessage,
+    }));
   };
 
   const handleSubmit = (e) => {
-      e.preventDefault();
-    
-      let isValid = true;
-      const newTouchedFields = {};
-    
-      // Validate all fields and set touched for empty fields
-      Object.keys(formData).forEach((fieldName) => {
-        if (formData[fieldName] === '') {
+    e.preventDefault();
+
+    let isValid = true;
+    const newTouchedFields = {};
+
+    Object.keys(formData).forEach((fieldName) => {
+      if (formData[fieldName] === '') {
+        isValid = false;
+      } else {
+        const fieldErrorMessage = validateField(fieldName, formData[fieldName]);
+        if (fieldErrorMessage !== '') {
           isValid = false;
           newTouchedFields[fieldName] = true;
-        } else {
-          const fieldErrorMessage = validateField(fieldName);
-          if (fieldErrorMessage !== '') {
-            isValid = false;
-          }
         }
-      });
-    
-      setTouchedFields(newTouchedFields);
-    
-      if (isValid) {
-        const convertedFormData = {
-          ...formData,
-          Taste: formData.Taste.toLowerCase() === 'good' ? 1 : 0,
-          Odor: formData.Odor.toLowerCase() === 'good' ? 1 : 0,
-          Fat: formData.Fat.toLowerCase() === 'high' ? 1 : 0,
-          Turbidity: formData.Turbidity.toLowerCase() === 'high' ? 1 : 0
-        };
-        onSubmit(convertedFormData);
       }
-    
+    });
+
+    setTouchedFields(newTouchedFields);
+
+    if (isValid) {
+      const convertedFormData = {
+        ...formData,
+        Taste: formData.Taste.toLowerCase() === 'good' ? 1 : 0,
+        Odor: formData.Odor.toLowerCase() === 'good' ? 1 : 0,
+        Fat: formData.Fat.toLowerCase() === 'high' ? 1 : 0,
+        Turbidity: formData.Turbidity.toLowerCase() === 'high' ? 1 : 0,
+      };
+      onSubmit(convertedFormData);
+    }
   };
 
   return (
@@ -146,8 +133,9 @@ export const InputForm = ({ onSubmit }) => {
           value={formData.pH}
           onChange={handleChange}
           onBlur={() => handleBlur('pH')}
-          error={errors.pH !== ''}
+          error={touchedFields.pH && errors.pH !== ''}
           helperText={touchedFields.pH && errors.pH}
+          required
         />
         <TextField
           fullWidth
@@ -156,49 +144,70 @@ export const InputForm = ({ onSubmit }) => {
           value={formData.Temperature}
           onChange={handleChange}
           onBlur={() => handleBlur('Temperature')}
-          error={errors.Temperature !== ''}
+          error={touchedFields.Temperature && errors.Temperature !== ''}
           helperText={touchedFields.Temperature && errors.Temperature}
+          required
         />
         <TextField
           fullWidth
-          label="Taste (Good/Bad)"
+          select
+          label="Taste"
           name="Taste"
           value={formData.Taste}
           onChange={handleChange}
           onBlur={() => handleBlur('Taste')}
-          error={errors.Taste !== ''}
+          error={touchedFields.Taste && errors.Taste !== ''}
           helperText={touchedFields.Taste && errors.Taste}
-        />
+          required
+        >
+          <MenuItem value="good">Good</MenuItem>
+          <MenuItem value="bad">Bad</MenuItem>
+        </TextField>
         <TextField
           fullWidth
-          label="Odor (Good/Bad)"
+          select
+          label="Odor"
           name="Odor"
           value={formData.Odor}
           onChange={handleChange}
           onBlur={() => handleBlur('Odor')}
-          error={errors.Odor !== ''}
+          error={touchedFields.Odor && errors.Odor !== ''}
           helperText={touchedFields.Odor && errors.Odor}
-        />
+          required
+        >
+          <MenuItem value="good">Good</MenuItem>
+          <MenuItem value="bad">Bad</MenuItem>
+        </TextField>
         <TextField
           fullWidth
-          label="Fat (Low/High)"
+          select
+          label="Fat"
           name="Fat"
           value={formData.Fat}
           onChange={handleChange}
           onBlur={() => handleBlur('Fat')}
-          error={errors.Fat !== ''}
+          error={touchedFields.Fat && errors.Fat !== ''}
           helperText={touchedFields.Fat && errors.Fat}
-        />
+          required
+        >
+          <MenuItem value="high">High</MenuItem>
+          <MenuItem value="low">Low</MenuItem>
+        </TextField>
         <TextField
           fullWidth
-          label="Turbidity (Low/High)"
+          select
+          label="Turbidity"
           name="Turbidity"
           value={formData.Turbidity}
           onChange={handleChange}
           onBlur={() => handleBlur('Turbidity')}
-          error={errors.Turbidity !== ''}
+          error={touchedFields.Turbidity && errors.Turbidity !== ''}
           helperText={touchedFields.Turbidity && errors.Turbidity}
-        />
+          required
+        >
+          <MenuItem value="high">High</MenuItem>
+          <MenuItem value="low">Low</MenuItem>
+        </TextField>
         <TextField
           fullWidth
           label="Colour (240-255)"
@@ -206,10 +215,13 @@ export const InputForm = ({ onSubmit }) => {
           value={formData.Colour}
           onChange={handleChange}
           onBlur={() => handleBlur('Colour')}
-          error={errors.Colour !== ''}
+          error={touchedFields.Colour && errors.Colour !== ''}
           helperText={touchedFields.Colour && errors.Colour}
+          required
         />
-        <Button type="submit" variant="contained" color="primary">
+        <Button type="submit"
+          variant="contained"
+          color="primary">
           Submit
         </Button>
       </Stack>
@@ -218,5 +230,5 @@ export const InputForm = ({ onSubmit }) => {
 };
 
 InputForm.propTypes = {
-  onSubmit: PropTypes.func.isRequired
+  onSubmit: PropTypes.func.isRequired,
 };
