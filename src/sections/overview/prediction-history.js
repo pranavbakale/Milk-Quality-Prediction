@@ -18,7 +18,7 @@ export const OverviewLatestOrders = (props) => {
   const { sx, fetchTrigger } = props;
   const [files, setFiles] = useState([]);
   const token = localStorage.getItem('token');
-  console.log(token);
+
   useEffect(() => {
     const fetchFiles = async () => {
       try {
