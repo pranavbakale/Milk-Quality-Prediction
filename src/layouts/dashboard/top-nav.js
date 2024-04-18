@@ -93,13 +93,6 @@ export const TopNav = (props) => {
             direction="row"
             spacing={2}
           >
-            <Tooltip title="Export">
-              <IconButton>
-                <SvgIcon fontSize="big">
-                  <GetAppRoundedIcon />
-                </SvgIcon>
-              </IconButton>
-            </Tooltip>
             <Avatar
               onClick={accountPopover.handleOpen}
               ref={accountPopover.anchorRef}

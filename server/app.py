@@ -1,6 +1,6 @@
 import pickle
 import secrets
-from flask import Flask, request, jsonify, session, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_file, session, render_template, send_from_directory
 from flask_mail import Mail, Message
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -8,7 +8,6 @@ import pandas as pd
 from bson import ObjectId
 import random
 import string
-
 from werkzeug.utils import secure_filename
 import os
 import uuid  # Import UUID module
@@ -20,27 +19,26 @@ from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from datetime import datetime
-app = Flask(__name__)
-CORS(app, supports_credentials=True)
-# Configure Flask-Mail with SMTP server details
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'abhidadavc@gmail.com'  # Your email address
-app.config['MAIL_PASSWORD'] = 'prwt zmlh zemc fpcd'  # Your email password
-
-mail = Mail(app)
-
+import matplotlib
+matplotlib.use('Agg')  # Use the 'Agg' backend
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.metrics import accuracy_score 
 from pandas import json_normalize
 from sklearn.model_selection import train_test_split
-from io import StringIO
+from io import BytesIO, StringIO
 import re
 import datetime
 from dateutil.relativedelta import relativedelta
+from fpdf import FPDF
+
+import smtplib
+from email.message import EmailMessage
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-
 # Configure Flask-Mail with SMTP server details
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
@@ -49,8 +47,6 @@ app.config['MAIL_USERNAME'] = 'abhidadavc@gmail.com'  # Your email address
 app.config['MAIL_PASSWORD'] = 'prwt zmlh zemc fpcd'  # Your email password
 
 mail = Mail(app)
-
-
 
 # MongoDB connection string
 MONGO_URL = "mongodb+srv://atharva00:atharva_db123@cluster-atga-dev-01.bvrwcjt.mongodb.net/?retryWrites=true&w=majority&appName=cluster-atga-dev-01"
@@ -543,18 +539,243 @@ def get_color_data():
     color_data = df['Colour'].value_counts().to_dict()
     return jsonify(color_data)
 
-@app.route('/get-last-50-predictions')
-def get_last_50_predictions():
-    # Fetch the last 50 entries from the prediction database
-    last_50_predictions = list(milk_db.milk_prediction_result.find().sort("_id", -1).limit(50))
-    
-    # Remove the _id field from each document
-    for prediction in last_50_predictions:
-        prediction.pop('_id', None)
-    
-    return jsonify(last_50_predictions)
+@app.route('/get-predictions', methods=['GET'])
+def get_predictions():
+    # Get the current year and month
+    current_year = datetime.datetime.now().year
+    current_month = datetime.datetime.now().month
+
+    # Generate the file name using the current year and month
+    month_year_str = datetime.datetime(current_year, current_month, 1).strftime('%b%Y')
+    # print("in backedn month year",month_year_str)
+    csv_file_name = f'milk_data_{month_year_str}.csv'
+    csv_file_path = os.path.join(app.root_path, csv_file_name)
+
+    # Check if the CSV file exists
+    if os.path.exists(csv_file_path):
+        # Read the CSV file into a DataFrame
+        df = pd.read_csv(csv_file_path)
+        df = df.sort_values(by=['date', 'time'], ascending=False)
+        value_counts_series = df['Grade'].value_counts()
+
+# If you want to convert the result to a DataFrame
+        value_counts_df = value_counts_series.reset_index()
+        value_counts_df.columns = ['Value', 'Count']
+        # Convert DataFrame to a list of dictionaries
+        grade_count = value_counts_df.to_dict(orient='records')
+        predictions = df.to_dict(orient='records')
+        # get_csvdata(df)
+        # Return predictions as JSON response
+        return jsonify({'predictions': predictions, 'grade_count':grade_count})
+    else:
+        return jsonify({'predictions': predictions})
 
 
+
+GRAPH_FOLDER = 'graphs'
+app.config['GRAPH_FOLDER'] = GRAPH_FOLDER
+
+@app.route('/generate-graphs', methods=['POST'])
+def generate_graphs():
+    attribute = request.json.get('attribute')
+
+
+    # Check if attributes are provided
+    if not attribute:
+        return jsonify({'error': 'Attributes not provided'}), 400
+
+    graph_dir = os.path.join(app.root_path, app.config['GRAPH_FOLDER'])
+    if not os.path.exists(graph_dir):
+        os.makedirs(graph_dir)
+
+    # List all files in the static directory
+    existing_files = os.listdir(graph_dir)
+
+    # Iterate over existing files and remove graphs
+    for file in existing_files:
+        if file.endswith('.png'):  # Check if file is a PNG image
+            os.remove(os.path.join(graph_dir, file))  # Delete the file
+
+     # Save the graphs in the graph folder
+    line_plot_path = os.path.join(graph_dir, 'line_plot.png')
+    histogram_path = os.path.join(graph_dir, 'histogram.png')
+    box_plot_path = os.path.join(graph_dir, 'box_plot.png')
+    heatmap_path = os.path.join(graph_dir, 'heatmap.png')
+    count_plot_path = os.path.join(graph_dir,'count_plot.png')
+    current_year = datetime.datetime.now().year
+    current_month = datetime.datetime.now().month
+
+    # Generate the file name using the current year and month
+    month_year_str = datetime.datetime(current_year, current_month, 1).strftime('%b%Y')
+    # print("in backedn month year",month_year_str)
+    csv_file_name = f'milk_data_{month_year_str}.csv'
+    csv_file_path = os.path.join(app.root_path, csv_file_name)
+
+    # Check if the CSV file exists
+    if os.path.exists(csv_file_path):
+        # Read the CSV file into a DataFrame
+        df = pd.read_csv(csv_file_path)
+    else:
+        return jsonify({'error': 'CSV file not found'}), 404
+  
+    numeric_columns = df.select_dtypes(include=['number']).columns
+    df_numeric = df[numeric_columns]
+    df = df.sort_values(by='date', ascending=True)
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['date'], df[attribute], label=attribute)
+    plt.xlabel('Date')
+    plt.ylabel('Attribute Value')
+    plt.title('Time Series Analysis')
+    plt.legend()
+    plt.savefig(line_plot_path)
+    plt.close()
+
+    # Histogram for attribute distribution
+    plt.figure(figsize=(10, 6))
+    sns.histplot(df[attribute], kde=True, color='blue', label=attribute)
+    plt.xlabel('Attribute Value')
+    plt.ylabel('Frequency')
+    plt.title('Attribute Distribution')
+    plt.legend()
+    plt.savefig(histogram_path)
+    plt.close()
+
+    # Box plot for attribute variation
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(data=df[[attribute]])
+    plt.ylabel('Attribute Value')
+    plt.title('Attribute Variation')
+    plt.savefig(box_plot_path)
+    plt.close()
+
+    plt.figure(figsize=(12,8))
+    plt.title("Attribute of Milk",fontsize=15)
+    c1=sns.countplot(x=attribute,data=df,palette="deep")
+    c1.bar_label(c1.containers[0],size=12)
+    plt.xticks(rotation=45)
+    plt.savefig(count_plot_path)
+
+    # Heatmap for correlation matrix
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(df_numeric.corr(), annot=True, cmap='coolwarm')
+    plt.title('Correlation Matrix')
+    plt.savefig(heatmap_path)
+    plt.close()
+
+    return jsonify({
+        'linePlotUrl': 'line_plot.png',
+        'histogramUrl': 'histogram.png',
+        'boxPlotUrl':  'box_plot.png',
+        'countPlotUrl': 'count_plot.png',
+        'heatmapUrl': 'heatmap.png'
+    })
+
+@app.route('/graphs/<path:filename>')
+def send_graphs(filename):
+    return send_from_directory(app.config['GRAPH_FOLDER'], filename)
+
+# app.config['GRAPH_FOLDER'] = 'graph-data'
+# app.config['INSIGHT_PDF_FOLDER'] = 'graph-data-pdf'
+
+# graph_dir = os.path.join(app.root_path, app.config['GRAPH_FOLDER'])
+
+# line_plot_path = os.path.join(graph_dir, 'line_plot.png')
+# histogram_path = os.path.join(graph_dir, 'histogram.png')
+# box_plot_path = os.path.join(graph_dir, 'box_plot.png')
+# heatmap_path = os.path.join(graph_dir, 'heatmap.png')
+# count_plot_path = os.path.join(graph_dir,'count_plot.png')
+
+# graph_urls = [line_plot_path,histogram_path,box_plot_path, heatmap_path,count_plot_path]
+# @app.route('/generate-graphs-pdf', methods=['GET'])
+# def generate_pdf(graph_urls):
+#     # Create a canvas object to generate PDF
+#     c = canvas.Canvas("report.pdf", pagesize=letter)
+   
+#     # Add graphs to the PDF
+#     for index, url in enumerate(graph_urls):
+#         c.drawImage(url, x=50, y=600 - (index * 200), width=400, height=200)
+
+#     # Add insights and analysis
+#     c.drawString(50, 500, "Insights:")
+#     y_position = 480
+#     for insight in insights:
+#         c.drawString(50, y_position, insight)
+#         y_position -= 20
+   
+#     # Save the PDF
+#     c.save()
+
+# # Function to send email with PDF attachment
+# def send_email_with_attachment(email, pdf_filename):
+#     # Create an EmailMessage object
+#     msg = EmailMessage()
+#     msg['Subject'] = 'Your Graphs and Insights'
+#     msg['From'] = 'your_email@example.com'
+#     msg['To'] = email
+#     msg.set_content('Please find attached the PDF with your graphs and insights.')
+
+#     # Attach the PDF to the email
+#     with open(pdf_filename, 'rb') as file:
+#         file_data = file.read()
+#         msg.add_attachment(file_data, maintype='application', subtype='octet-stream', filename=pdf_filename)
+
+#     # Send the email using SMTP
+#     with smtplib.SMTP('smtp.example.com', 587) as smtp:
+#         smtp.starttls()
+#         smtp.login('your_email@example.com', 'your_email_password')
+# #         smtp.send_message(msg)
+
+# # Usage
+# if __name__ == "__main__":
+#     # Replace these with your actual graph URLs and insights
+#     graph_urls = ['graph1.png', 'graph2.png', 'graph3.png']
+#     insights = ['Insight 1', 'Insight 2', 'Insight 3']
+
+#     # Generate PDF
+#     generate_pdf(graph_urls)
+
+#     # Send email with PDF attachment
+#     send_email_with_attachment('recipient@example.com', 'report.pdf')
+
+
+# def generate_graphs_pdf():
+#     attribute = request.json.get('attribute')
+#     # Check if attributes are provided
+#     if not attribute:
+#         return jsonify({'error': 'Attributes not provided'}), 400
+
+#     # Generate the plots (Replace this section with your actual plot generation code)
+#     line_plot_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'line_plot.png')
+#     histogram_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'histogram.png')
+#     box_plot_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'box_plot.png')
+#     heatmap_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'heatmap.png')
+#     count_plot_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'count_plot.png')
+
+#     # Create a BytesIO object to store the PDF
+#     pdf_bytes = BytesIO()
+
+#     # Create a PDF document
+#     pdf = FPDF()
+#     pdf.set_auto_page_break(auto=True, margin=15)
+
+#     # Add a page
+#     pdf.add_page()
+
+#     # Add the plots to the PDF
+#     pdf.image(line_plot_path, x=10, y=10, w=180)
+#     pdf.image(histogram_path, x=10, y=120, w=180)
+#     pdf.image(box_plot_path, x=10, y=230, w=180)
+#     pdf.image(count_plot_path, x=10, y=340, w=180)
+#     pdf.image(heatmap_path, x=10, y=450, w=180)
+
+#     # Generate the PDF file path
+#     pdf_file_path = os.path.join(app.root_path, app.config['INSIGHT_PDF_FOLDER'], 'graphs.pdf')
+
+#     # Output the PDF to the file system
+#     pdf.output(pdf_file_path)
+
+#     # Return the path to the folder containing the PDF file
+#     return jsonify({'pdf_folder_path': os.path.dirname(pdf_file_path)})
 
 if __name__ == '__main__':
     app.run(debug=True)

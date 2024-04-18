@@ -12,6 +12,11 @@ import { InputForm } from "src/sections/overview/input-data";
 const now = new Date();
 
 const Page = () => {
+  const [GradeCounts, setGradeCounts] = useState([]);
+  const [LowPred, setLowPred] = useState(0);
+  const [MedPred, setMedPred] = useState(0);
+  const [HighPred, setHighPred] = useState(0);
+  const [TotalCount, setTotalCount] = useState(0);
   const [predictionResults, setPredictionResults] = useState({
     prediction: null,
     accuracy: null,
@@ -20,15 +25,32 @@ const Page = () => {
   const [token, setToken] = useState(""); // State to store the token
 
   useEffect(() => {
+    const fetchPredictions = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/get-predictions");
+        setGradeCounts(response.data.grade_count);
+        const lowCount = response.data.grade_count[0]?.Count || 0;
+        const medCount = response.data.grade_count[1]?.Count || 0;
+        const highCount = response.data.grade_count[2]?.Count || 0;
+        const totalCount = lowCount + medCount + highCount;
+        setLowPred(lowCount);
+        setMedPred(medCount);
+        setHighPred(highCount);
+        setTotalCount(totalCount);
+      } catch (error) {
+        console.error("Error fetching predictions:", error);
+      }
+    };
+
+    fetchPredictions();
+
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
       setToken(storedToken);
-      console.log("Token:", storedToken); // Log the token after it's retrieved
     } else {
-      // Handle case where token is not available in session storage
       console.error("Token not found in session storage.");
     }
-  }, []); // Run this effect only once on component mount
+  }, [fetchTrigger]);
 
   const handleInputFormSubmit = (formData) => {
     axios
@@ -61,7 +83,7 @@ const Page = () => {
           <Grid container spacing={3}>
             <Grid item xs={12} md={6} lg={4}>
               <PredictionAnalysis
-                chartSeries={[22, 15, 63]}
+                chartSeries={([Math.floor((LowPred/TotalCount) * 100), Math.floor((MedPred/TotalCount)*100), Math.ceil((HighPred/TotalCount)*100)])}
                 labels={["Low", "Medium", "High"]}
                 sx={{ height: "100%" }}
               />
