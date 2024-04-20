@@ -22,9 +22,9 @@ export const OverviewLatestOrders = (props) => {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-          const response = await axios.post(
-            `http://localhost:5000/last-six-months-data?token=${token}`
-          );
+        const response = await axios.post(
+          `http://localhost:5000/last-six-months-data?token=${token}`
+        );
         setFiles(response.data);
       } catch (error) {
         console.error("Error fetching files:", error);
@@ -33,6 +33,21 @@ export const OverviewLatestOrders = (props) => {
 
     fetchFiles();
   }, [fetchTrigger]); // Fetch files each time fetchTrigger changes
+
+  const downloadFile = async (fileName, filePath) => {
+    axios.get(`http://localhost:5000/download-csv/${filePath}`, { responseType: 'blob' })
+      .then((response) => {
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+      })
+      .catch((error) => {
+        console.error('Error downloading file:', error);
+      });
+  };
 
   return (
     <Card sx={sx}>
@@ -52,7 +67,10 @@ export const OverviewLatestOrders = (props) => {
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>{file.file_name}</TableCell>
                 <TableCell>
-                  <IconButton href={file.file_path} download>
+                  <IconButton
+                    onClick={() => downloadFile(file.file_name, file.file_path)}
+                  // Change href to onClick
+                  >
                     <GetAppRoundedIcon />
                   </IconButton>
                 </TableCell>

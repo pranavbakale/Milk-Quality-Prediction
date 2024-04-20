@@ -1,6 +1,6 @@
 import pickle
 import secrets
-from flask import Flask, request, jsonify, send_file, session, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_file, session, render_template, send_from_directory, make_response
 from flask_mail import Mail, Message
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -30,7 +30,7 @@ from io import BytesIO, StringIO
 import re
 import datetime
 from dateutil.relativedelta import relativedelta
-from fpdf import FPDF
+# from fpdf import FPDF
 
 import smtplib
 from email.message import EmailMessage
@@ -367,6 +367,12 @@ def reset_pwd():
 
     return jsonify({'message': 'Password reset successfully'}), 200
 
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from dotenv import load_dotenv
+# import json
+
+load_dotenv()
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -398,6 +404,54 @@ def predict():
     fat = data.get('Fat')
     turbidity = data.get('Turbidity')
     colour = data.get('Colour')
+
+    os.environ["OPENAI_API_KEY"] = "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"
+    # sk-proj-IX93UeKrpDmpy3A7pRY3T3BlbkFJ0bPnQ7kJBATzaJXXod2w          new api key
+  
+
+    # Initialize ChatGPT instance
+    chat_gpt = ChatOpenAI(temperature=0.0, request_timeout=120)
+
+    def generate_milk_quality_suggestions(pH, temperature, taste, odor, fat, turbidity, colour):
+        # Construct prompt/template for ChatGPT
+        prompt_template = """
+        Suggestions for improving milk quality based on attributes:
+        - pH: {pH}
+        - Temperature: {temperature}
+        - Taste: {taste}
+        - Odor: {odor}
+        - Fat: {fat}
+        - Turbidity: {turbidity}
+        - Colour: {colour}
+        
+        Suggestions:
+        -5. Check pH levels and adjust if necessary.\n
+        -4. Ensure milk is stored at the correct temperature range.\n
+        -3. Monitor taste and odor for signs of spoilage.\n
+        -2. Maintain proper fat content for desired consistency.\n
+        -1. Monitor turbidity to ensure clarity.\n
+        0. Check color for abnormalities.\n
+        """
+        # Format the prompt/template with attribute values
+        prompt = ChatPromptTemplate.from_template(template=prompt_template)
+        messages = prompt.format_messages(
+            pH=pH,
+            temperature=temperature,
+            taste=taste,
+            odor=odor,
+            fat=fat,
+            turbidity=turbidity,
+            colour=colour,
+        )
+
+        # Generate suggestions using ChatGPT
+        response = chat_gpt(messages)
+
+        # # Extract suggestions from ChatGPT response
+        suggestions = response.content.strip().replace('\n','<br>')
+        
+        return suggestions
+
     current_date = datetime.datetime.now().strftime('%d-%b-%Y')
     current_month = datetime.datetime.now().month
     current_year = datetime.datetime.now().year
@@ -406,6 +460,8 @@ def predict():
     user_id = user.get('_id')
     time = datetime.datetime.now().strftime("%H:%M:%S")
     Grade = pred
+    suggestions= generate_milk_quality_suggestions(pH, temperature, taste, odor, fat, turbidity, colour)
+
     prediction_data = {
         'user_id':user_id,
         'time': time,
@@ -421,8 +477,10 @@ def predict():
         'Colour':colour,
         'Grade': Grade
     }
+
     milk_db.milk_prediction_result.insert_one(prediction_data)
-    return jsonify({'prediction': pred, 'accuracy':  approximated_accuracy})
+    return jsonify({'prediction': pred, 'accuracy':  approximated_accuracy,'suggestions': suggestions})
+
 
 UPLOAD_FOLDER = 'uploads/avatars'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -674,108 +732,78 @@ def generate_graphs():
 def send_graphs(filename):
     return send_from_directory(app.config['GRAPH_FOLDER'], filename)
 
-# app.config['GRAPH_FOLDER'] = 'graph-data'
-# app.config['INSIGHT_PDF_FOLDER'] = 'graph-data-pdf'
+@app.route('/send-graphs-pdf-email', methods=['POST'])
+def send_graphs_pdf_email():
+    # Get the user's email from the request
+    attribute = request.json.get('attribute')
+    token = request.json.get('token')
 
-# graph_dir = os.path.join(app.root_path, app.config['GRAPH_FOLDER'])
+    user = user_db.users.find_one({"token": token})
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
 
-# line_plot_path = os.path.join(graph_dir, 'line_plot.png')
-# histogram_path = os.path.join(graph_dir, 'histogram.png')
-# box_plot_path = os.path.join(graph_dir, 'box_plot.png')
-# heatmap_path = os.path.join(graph_dir, 'heatmap.png')
-# count_plot_path = os.path.join(graph_dir,'count_plot.png')
+    user_email = user.get('email')
+    # Create a message object
+    msg = Message('Generated Graphs PDF', sender='abhidadavc@gmail.com', recipients=[user_email])
 
-# graph_urls = [line_plot_path,histogram_path,box_plot_path, heatmap_path,count_plot_path]
-# @app.route('/generate-graphs-pdf', methods=['GET'])
-# def generate_pdf(graph_urls):
-#     # Create a canvas object to generate PDF
-#     c = canvas.Canvas("report.pdf", pagesize=letter)
-   
-#     # Add graphs to the PDF
-#     for index, url in enumerate(graph_urls):
-#         c.drawImage(url, x=50, y=600 - (index * 200), width=400, height=200)
+    # Attach the PDF file to the email
+    pdf_filename = f"{attribute}_graphs.pdf"  # Assuming the PDF is generated with this name
+    pdf_path = os.path.join(app.config['PDF_FOLDER'], pdf_filename)
+    
+    if not os.path.exists(pdf_path):
+        generate_graphs_pdf(attribute)  # Generate the PDF file if not found
 
-#     # Add insights and analysis
-#     c.drawString(50, 500, "Insights:")
-#     y_position = 480
-#     for insight in insights:
-#         c.drawString(50, y_position, insight)
-#         y_position -= 20
-   
-#     # Save the PDF
-#     c.save()
+    # Attach the PDF file to the email if it exists
+    if os.path.exists(pdf_path):
+        with app.open_resource(pdf_path) as attachment:
+            msg.attach(pdf_filename, 'application/pdf', attachment.read())
 
-# # Function to send email with PDF attachment
-# def send_email_with_attachment(email, pdf_filename):
-#     # Create an EmailMessage object
-#     msg = EmailMessage()
-#     msg['Subject'] = 'Your Graphs and Insights'
-#     msg['From'] = 'your_email@example.com'
-#     msg['To'] = email
-#     msg.set_content('Please find attached the PDF with your graphs and insights.')
-
-#     # Attach the PDF to the email
-#     with open(pdf_filename, 'rb') as file:
-#         file_data = file.read()
-#         msg.add_attachment(file_data, maintype='application', subtype='octet-stream', filename=pdf_filename)
-
-#     # Send the email using SMTP
-#     with smtplib.SMTP('smtp.example.com', 587) as smtp:
-#         smtp.starttls()
-#         smtp.login('your_email@example.com', 'your_email_password')
-# #         smtp.send_message(msg)
-
-# # Usage
-# if __name__ == "__main__":
-#     # Replace these with your actual graph URLs and insights
-#     graph_urls = ['graph1.png', 'graph2.png', 'graph3.png']
-#     insights = ['Insight 1', 'Insight 2', 'Insight 3']
-
-#     # Generate PDF
-#     generate_pdf(graph_urls)
-
-#     # Send email with PDF attachment
-#     send_email_with_attachment('recipient@example.com', 'report.pdf')
+    # Send the email
+    try:
+        mail.send(msg)
+        return jsonify({'message': 'Email sent successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
-# def generate_graphs_pdf():
-#     attribute = request.json.get('attribute')
-#     # Check if attributes are provided
-#     if not attribute:
-#         return jsonify({'error': 'Attributes not provided'}), 400
+# Define the PDF folder path
+PDF_FOLDER = "pdf_files"
+app.config['PDF_FOLDER'] = PDF_FOLDER
+# app.config['PDF_FOLDER'] = os.path.join(app.root_path, 'pdf_files')
 
-#     # Generate the plots (Replace this section with your actual plot generation code)
-#     line_plot_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'line_plot.png')
-#     histogram_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'histogram.png')
-#     box_plot_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'box_plot.png')
-#     heatmap_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'heatmap.png')
-#     count_plot_path = os.path.join(app.root_path, app.config['GRAPH_FOLDER'], 'count_plot.png')
+@app.route('/generate-graphs-pdf', methods=['GET'])
+def generate_graphs_pdf(pdf_path):
+    attribute = request.args.get('attribute')
 
-#     # Create a BytesIO object to store the PDF
-#     pdf_bytes = BytesIO()
+    # Create a PDF file
+    pdf_filename = f"{attribute}_graphs.pdf"
+    pdf_path = os.path.join(app.config['PDF_FOLDER'], pdf_filename)
+    c = canvas.Canvas(pdf_path, pagesize=letter)
 
-#     # Create a PDF document
-#     pdf = FPDF()
-#     pdf.set_auto_page_break(auto=True, margin=15)
+    # Get all image files from the graphs folder
+    graph_folder = app.config['GRAPH_FOLDER']
+    graph_files = [f for f in os.listdir(graph_folder) if os.path.isfile(os.path.join(graph_folder, f))]
 
-#     # Add a page
-#     pdf.add_page()
+    # Draw each image on a separate page in the PDF
+    for i, graph_file in enumerate(graph_files):
+        # Draw the image on the PDF canvas
+        c.drawImage(os.path.join(graph_folder, graph_file), 50, 50, width=500, height=400)
+        # Add a new page for the next image (except for the last image)
+        if i < len(graph_files) - 1:
+            c.showPage()
 
-#     # Add the plots to the PDF
-#     pdf.image(line_plot_path, x=10, y=10, w=180)
-#     pdf.image(histogram_path, x=10, y=120, w=180)
-#     pdf.image(box_plot_path, x=10, y=230, w=180)
-#     pdf.image(count_plot_path, x=10, y=340, w=180)
-#     pdf.image(heatmap_path, x=10, y=450, w=180)
+    # Save the PDF
+    c.save()
 
-#     # Generate the PDF file path
-#     pdf_file_path = os.path.join(app.root_path, app.config['INSIGHT_PDF_FOLDER'], 'graphs.pdf')
+    # Send the PDF file to the user for download
+    return send_file(pdf_path, as_attachment=True)
 
-#     # Output the PDF to the file system
-#     pdf.output(pdf_file_path)
-
-#     # Return the path to the folder containing the PDF file
-#     return jsonify({'pdf_folder_path': os.path.dirname(pdf_file_path)})
+@app.route('/download-csv/<path:filename>', methods=['GET'])
+def download_csv(filename):
+    filename = os.path.basename(filename)
+    response = make_response(send_file(filename, as_attachment=True))
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Typography, Grid } from '@mui/material';
 
-export const PredictionResult = ({ prediction, accuracy}) => {
+export const PredictionResult = ({ prediction, accuracy, suggestions }) => {
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} sm={6}>
@@ -16,11 +16,13 @@ export const PredictionResult = ({ prediction, accuracy}) => {
             <Typography variant="body1" gutterBottom>
               Accuracy: {accuracy}%
             </Typography>
+            <Typography variant='body1' gutterBottom>
+              Suggestions: <span dangerouslySetInnerHTML={{ __html: suggestions }} />
+              {/* Suggestions:{suggestions} */}
+            </Typography>
           </CardContent>
         </Card>
       </Grid>
     </Grid>
   );
 };
-
-

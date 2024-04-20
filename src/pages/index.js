@@ -20,6 +20,7 @@ const Page = () => {
   const [predictionResults, setPredictionResults] = useState({
     prediction: null,
     accuracy: null,
+    suggestions: null,
   });
   const [fetchTrigger, setFetchTrigger] = useState(false);
   const [token, setToken] = useState(""); // State to store the token
@@ -59,6 +60,7 @@ const Page = () => {
         setPredictionResults({
           prediction: response.data.prediction,
           accuracy: response.data.accuracy,
+          suggestions: response.data.suggestions,
         });
         setFetchTrigger((prev) => !prev); // Toggle fetch trigger
       })
@@ -83,7 +85,7 @@ const Page = () => {
           <Grid container spacing={3}>
             <Grid item xs={12} md={6} lg={4}>
               <PredictionAnalysis
-                chartSeries={([Math.floor((LowPred/TotalCount) * 100), Math.floor((MedPred/TotalCount)*100), Math.ceil((HighPred/TotalCount)*100)])}
+                chartSeries={([Math.floor((LowPred / TotalCount) * 100), Math.floor((MedPred / TotalCount) * 100), Math.ceil((HighPred / TotalCount) * 100)])}
                 labels={["Low", "Medium", "High"]}
                 sx={{ height: "100%" }}
               />
@@ -93,6 +95,7 @@ const Page = () => {
               <PredictionResult
                 prediction={predictionResults.prediction}
                 accuracy={predictionResults.accuracy}
+                suggestions={predictionResults.suggestions}
               />
             </Grid>
             <Grid item xs={12} md={12} lg={8}>
